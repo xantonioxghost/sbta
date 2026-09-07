@@ -11,12 +11,24 @@ export type Preferences = {
   vibration: boolean;
   sound: boolean;
 };
+export type HealthProfile = {
+  name: string;
+  age: string;
+  height: string;
+  weight: string;
+  postureGoal: string;
+  painAreas: string;
+  injuries: string;
+  conditions: string;
+  mobilityLimitations: string;
+};
 
 type PostureContextValue = {
   angle: number;
   readings: Reading[];
   status: ConnectionStatus;
   preferences: Preferences;
+  profile: HealthProfile;
   sessionStartedAt: number | null;
   badStreak: number;
   alertActive: boolean;
@@ -25,9 +37,11 @@ type PostureContextValue = {
   disconnect: () => void;
   calibrate: () => void;
   updatePreferences: (next: Partial<Preferences>) => void;
+  updateProfile: (next: HealthProfile) => void;
 };
 
 const STORAGE_KEY = '@posture-monitor/preferences';
+const PROFILE_STORAGE_KEY = '@posture-monitor/health-profile';
 const PostureContext = createContext<PostureContextValue | null>(null);
 
 const defaultPreferences: Preferences = {
@@ -37,12 +51,24 @@ const defaultPreferences: Preferences = {
   vibration: true,
   sound: false,
 };
+const defaultProfile: HealthProfile = {
+  name: '',
+  age: '',
+  height: '',
+  weight: '',
+  postureGoal: '',
+  painAreas: '',
+  injuries: '',
+  conditions: '',
+  mobilityLimitations: '',
+};
 
 export function PostureProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [angle, setAngle] = useState(3);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
+  const [profile, setProfile] = useState<HealthProfile>(defaultProfile);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
   const [badStreak, setBadStreak] = useState(0);
   const [alertActive, setAlertActive] = useState(false);
@@ -67,8 +93,24 @@ export function PostureProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
+    AsyncStorage.getItem(PROFILE_STORAGE_KEY).then((stored) => {
+      if (stored) {
+        try {
+          setProfile({ ...defaultProfile, ...JSON.parse(stored) });
+        } catch {
+          setProfile(defaultProfile);
+        }
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(preferences)).catch(() => undefined);
   }, [preferences]);
+
+  useEffect(() => {
+    AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile)).catch(() => undefined);
+  }, [profile]);
 
   useEffect(() => {
     if (status !== 'connected') return;
@@ -136,11 +178,17 @@ export function PostureProvider({ children }: PropsWithChildren) {
     setPreferences((current) => ({ ...current, ...next }));
   };
 
+  const updateProfile = (next: HealthProfile) => {
+    setProfile(next);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const value = useMemo(() => ({
     angle,
     readings,
     status,
     preferences,
+    profile,
     sessionStartedAt,
     badStreak,
     alertActive,
@@ -149,7 +197,8 @@ export function PostureProvider({ children }: PropsWithChildren) {
     disconnect,
     calibrate,
     updatePreferences,
-  }), [alertActive, angle, badStreak, calibrationStep, preferences, readings, sessionStartedAt, status]);
+    updateProfile,
+  }), [alertActive, angle, badStreak, calibrationStep, preferences, profile, readings, sessionStartedAt, status]);
 
   return <PostureContext.Provider value={value}>{children}</PostureContext.Provider>;
 }

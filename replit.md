@@ -25,6 +25,7 @@ A local-first Expo companion app for an ESP32 posture wearable that helps users 
 - `artifacts/posture-monitor/app/(tabs)/index.tsx` — live dashboard
 - `artifacts/posture-monitor/app/(tabs)/history.tsx` — local progress summaries
 - `artifacts/posture-monitor/app/(tabs)/settings.tsx` — alert and wearable settings
+- `artifacts/posture-monitor/app/(tabs)/profile.tsx` — local health profile
 - `artifacts/posture-monitor/context/PostureContext.tsx` — shared local state and AsyncStorage persistence
 - `artifacts/posture-monitor/components/` — gauge, chart, and shared labels
 
@@ -42,6 +43,7 @@ A local-first Expo companion app for an ESP32 posture wearable that helps users 
 - Three-second baseline calibration flow
 - Configurable sensitivity, sustained-alert delay, haptic reminders, and notification preferences
 - On-device session chart and daily/weekly posture summaries
+- Local health profile for personal basics, posture context, pain areas, injuries, conditions, and mobility limitations
 
 ## User preferences
 
