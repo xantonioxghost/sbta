@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/posture-monitor/"
+title = "Posture Monitor"
+description = "A local-first mobile companion for an ESP32 posture wearable. It shows live tilt, helps users calibrate a straight baseline, alerts when bad posture persists, and summarizes posture sessions without requiring a cloud account."
+version = "1.0.0"
+id = "artifacts/posture-monitor"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/posture-monitor/" ]
+localPort = 18545
+
+[services.development]
+run = "pnpm --filter @workspace/posture-monitor run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/posture-monitor", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/posture-monitor", "run", "serve" ]
+
+[services.env]
+PORT = "18545"
+BASE_PATH = "/posture-monitor/"

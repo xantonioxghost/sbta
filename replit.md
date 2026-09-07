@@ -1,6 +1,6 @@
-# [Project name]
+# Posture Monitor
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A local-first Expo companion app for an ESP32 posture wearable that helps users stay aligned with live feedback, calibration, reminders, and session history.
 
 ## Run & Operate
 
@@ -13,7 +13,7 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
+- pnpm workspaces, Node.js 24, TypeScript 5.9, Expo SDK 57
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -22,23 +22,35 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/posture-monitor/app/(tabs)/index.tsx` — live dashboard
+- `artifacts/posture-monitor/app/(tabs)/history.tsx` — local progress summaries
+- `artifacts/posture-monitor/app/(tabs)/settings.tsx` — alert and wearable settings
+- `artifacts/posture-monitor/context/PostureContext.tsx` — shared local state and AsyncStorage persistence
+- `artifacts/posture-monitor/components/` — gauge, chart, and shared labels
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- v1 is local-first: posture preferences and active-session data stay on the phone; no backend or account is required.
+- Shared posture state lives in a React context so dashboard, history, and settings stay in sync.
+- The live device boundary is represented by the PostureBelt connection flow; the preview streams safe local readings until a native BLE adapter is installed for a physical build.
+- Expo Router tabs use iOS 26 NativeTabs when available and fall back to a custom-themed classic tab bar.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Glanceable live deviation gauge with good-posture feedback
+- PostureBelt connection state with a preview-safe device adapter
+- Three-second baseline calibration flow
+- Configurable sensitivity, sustained-alert delay, haptic reminders, and notification preferences
+- On-device session chart and daily/weekly posture summaries
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+No project-specific preferences recorded yet.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Use `pnpm --filter @workspace/posture-monitor run typecheck` for quick checks.
+- Expo preview runs through the managed `artifacts/posture-monitor: expo` workflow; do not start Expo with a bare CLI command.
 
 ## Pointers
 
