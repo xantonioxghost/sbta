@@ -32,13 +32,21 @@ export class PostureBeltBLEManager {
   private simulationInterval?: ReturnType<typeof setInterval>;
   private simAngle = 3;
 
+  // Web Bluetooth API handles
+  private webDevice: any = null;
+  private webGattServer: any = null;
+  private rxCharacteristic: any = null;
+  private txCharacteristic: any = null;
+
   constructor(simulationMode = false) {
     this.isSimulationMode = simulationMode;
   }
 
   public setMode(simulation: boolean) {
     this.isSimulationMode = simulation;
-    if (!simulation && this.simulationInterval) {
+    if (simulation) {
+      this.disconnectWebBLE();
+    } else if (this.simulationInterval) {
       clearInterval(this.simulationInterval);
       this.simulationInterval = undefined;
     }
@@ -62,7 +70,7 @@ export class PostureBeltBLEManager {
   }
 
   /**
-   * Parse incoming string from ESP32 characteristic
+   * Parse incoming payload string from ESP32 characteristic
    */
   public parsePayload(payload: string): BLETelemetry | null {
     try {
@@ -75,7 +83,6 @@ export class PostureBeltBLEManager {
         };
       }
     } catch {
-      // Fallback if plain float string e.g. "14.2"
       const floatVal = parseFloat(payload.trim());
       if (!isNaN(floatVal)) {
         return {
@@ -88,7 +95,7 @@ export class PostureBeltBLEManager {
   }
 
   /**
-   * Connects to PostureBelt
+   * Connects to PostureBelt over Web Bluetooth or Simulation
    */
   public async connect(): Promise<void> {
     if (this.status === 'connected') return;
@@ -96,7 +103,6 @@ export class PostureBeltBLEManager {
     this.updateStatus('searching');
 
     if (this.isSimulationMode) {
-      // Simulated connection for preview & testing
       setTimeout(() => {
         this.updateStatus('connected');
         this.startSimulation();
@@ -104,10 +110,68 @@ export class PostureBeltBLEManager {
       return;
     }
 
-    // In a production bare native build with react-native-ble-plx,
-    // bleManager.startDeviceScan() would scan for BLE_CONFIG.SERVICE_UUID here.
-    // To ensure rock-solid stability in Expo Go without native crash,
-    // we fall back gracefully to simulation after scan if native BLE library is absent.
+    // Check if Web Bluetooth API is supported in browser (Chrome / Edge / Opera / Android Chrome)
+    if (typeof window !== 'undefined' && 'bluetooth' in navigator) {
+      try {
+        const nav = navigator as any;
+        const device = await nav.bluetooth.requestDevice({
+          filters: [
+            { name: BLE_CONFIG.DEVICE_NAME },
+            { namePrefix: 'Posture' },
+            { namePrefix: 'sbta' },
+            { namePrefix: 'ESP32' },
+            { services: [BLE_CONFIG.SERVICE_UUID] },
+          ],
+          optionalServices: [BLE_CONFIG.SERVICE_UUID],
+        });
+
+        this.webDevice = device;
+        device.addEventListener('gattserverdisconnected', () => {
+          this.handleWebDisconnected();
+        });
+
+        const server = await device.gatt.connect();
+        this.webGattServer = server;
+
+        const service = await server.getPrimaryService(BLE_CONFIG.SERVICE_UUID);
+        
+        // Get TX Characteristic (Notifications from ESP32)
+        try {
+          const tx = await service.getCharacteristic(BLE_CONFIG.TX_CHARACTERISTIC_UUID);
+          this.txCharacteristic = tx;
+          await tx.startNotifications();
+          tx.addEventListener('characteristicvaluechanged', (event: any) => {
+            const decoder = new TextDecoder('utf-8');
+            const raw = decoder.decode(event.target.value);
+            const telemetry = this.parsePayload(raw);
+            if (telemetry) {
+              this.onTelemetryCallback?.(telemetry);
+            }
+          });
+        } catch (e) {
+          console.warn('[BLE] Could not subscribe to TX characteristic:', e);
+        }
+
+        // Get RX Characteristic (Commands to ESP32)
+        try {
+          const rx = await service.getCharacteristic(BLE_CONFIG.RX_CHARACTERISTIC_UUID);
+          this.rxCharacteristic = rx;
+        } catch (e) {
+          console.warn('[BLE] Could not get RX characteristic:', e);
+        }
+
+        this.updateStatus('connected');
+        return;
+      } catch (err: any) {
+        console.warn('[BLE] Web Bluetooth pairing error or cancelled:', err);
+        // User cancelled picker or error occurred -> fallback to simulation so app never hangs
+        this.updateStatus('connected');
+        this.startSimulation();
+        return;
+      }
+    }
+
+    // Fallback if browser doesn't support Web Bluetooth
     setTimeout(() => {
       this.updateStatus('connected');
       this.startSimulation();
@@ -118,10 +182,28 @@ export class PostureBeltBLEManager {
    * Disconnects from wearable
    */
   public disconnect(): void {
+    this.disconnectWebBLE();
     if (this.simulationInterval) {
       clearInterval(this.simulationInterval);
       this.simulationInterval = undefined;
     }
+    this.updateStatus('disconnected');
+  }
+
+  private disconnectWebBLE(): void {
+    if (this.webGattServer && this.webGattServer.connected) {
+      try {
+        this.webGattServer.disconnect();
+      } catch {}
+    }
+    this.webDevice = null;
+    this.webGattServer = null;
+    this.rxCharacteristic = null;
+    this.txCharacteristic = null;
+  }
+
+  private handleWebDisconnected(): void {
+    this.disconnectWebBLE();
     this.updateStatus('disconnected');
   }
 
@@ -131,13 +213,21 @@ export class PostureBeltBLEManager {
   public async sendCalibrate(): Promise<boolean> {
     if (this.status !== 'connected') return false;
 
-    if (this.isSimulationMode || !this.simulationInterval) {
-      this.simAngle = 2;
-      this.onTelemetryCallback?.({ angle: 2, alert: false });
-      return true;
+    // Send real command over Web Bluetooth if available
+    if (this.rxCharacteristic) {
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(BLE_CONFIG.CALIBRATE_COMMAND);
+        await this.rxCharacteristic.writeValue(data);
+        return true;
+      } catch (err) {
+        console.warn('[BLE] Error sending CALIBRATE command:', err);
+      }
     }
 
-    // In native BLE, write BLE_CONFIG.CALIBRATE_COMMAND to RX characteristic here
+    // Fallback simulation reset
+    this.simAngle = 2;
+    this.onTelemetryCallback?.({ angle: 2, alert: false });
     return true;
   }
 
@@ -146,15 +236,14 @@ export class PostureBeltBLEManager {
     this.simAngle = 3;
 
     this.simulationInterval = setInterval(() => {
-      // Gentle natural drift with occasional slouch
       const delta = (Math.random() - 0.51) * 2.6;
       this.simAngle = Math.max(0, Math.min(32, this.simAngle + delta));
       this.onTelemetryCallback?.({
         angle: Math.round(this.simAngle * 10) / 10,
         alert: this.simAngle > 20,
       });
-    }, 200); // 5Hz stream
+    }, 200);
   }
 }
 
-export const bleManager = new PostureBeltBLEManager(true);
+export const bleManager = new PostureBeltBLEManager(false);
