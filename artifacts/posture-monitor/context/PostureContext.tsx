@@ -1,9 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  deleteSessionFromSupabase,
+  fetchSessionsFromSupabase,
+  isSupabaseConfigured,
+  saveSessionToSupabase,
+  syncPreferencesToSupabase,
+  syncProfileToSupabase,
+} from '@/lib/supabase';
+import { bleManager } from '@/lib/bleManager';
 
 export type ConnectionStatus = 'disconnected' | 'searching' | 'connected';
+export type ConnectionMode = 'ble' | 'simulator';
 export type Reading = { angle: number; timestamp: number; good: boolean };
+
 export type Preferences = {
   threshold: number;
   delay: number;
@@ -11,6 +22,7 @@ export type Preferences = {
   vibration: boolean;
   sound: boolean;
 };
+
 export type HealthProfile = {
   name: string;
   age: string;
@@ -23,25 +35,49 @@ export type HealthProfile = {
   mobilityLimitations: string;
 };
 
+export type RecordedSession = {
+  id: string;
+  startedAt: number;
+  endedAt: number;
+  durationSeconds: number;
+  goodPercentage: number;
+  avgAngle: number;
+  maxAngle: number;
+  alertCount: number;
+  sessionType: string;
+  notes?: string;
+};
+
 type PostureContextValue = {
   angle: number;
   readings: Reading[];
   status: ConnectionStatus;
+  connectionMode: ConnectionMode;
   preferences: Preferences;
   profile: HealthProfile;
+  sessions: RecordedSession[];
   sessionStartedAt: number | null;
   badStreak: number;
   alertActive: boolean;
   calibrationStep: number;
+  isCloudSynced: boolean;
   connect: () => void;
   disconnect: () => void;
   calibrate: () => void;
+  setConnectionMode: (mode: ConnectionMode) => void;
   updatePreferences: (next: Partial<Preferences>) => void;
   updateProfile: (next: HealthProfile) => void;
+  deleteSession: (id: string) => Promise<void>;
+  clearSessions: () => Promise<void>;
+  refreshSessions: () => Promise<void>;
+  syncWithCloud: () => Promise<void>;
 };
 
 const STORAGE_KEY = '@posture-monitor/preferences';
 const PROFILE_STORAGE_KEY = '@posture-monitor/health-profile';
+const SESSIONS_STORAGE_KEY = '@posture-monitor/recorded-sessions';
+const MODE_STORAGE_KEY = '@posture-monitor/connection-mode';
+
 const PostureContext = createContext<PostureContextValue | null>(null);
 
 const defaultPreferences: Preferences = {
@@ -51,6 +87,7 @@ const defaultPreferences: Preferences = {
   vibration: true,
   sound: false,
 };
+
 const defaultProfile: HealthProfile = {
   name: '',
   age: '',
@@ -63,16 +100,57 @@ const defaultProfile: HealthProfile = {
   mobilityLimitations: '',
 };
 
+const now = Date.now();
+const dayMs = 24 * 60 * 60 * 1000;
+const seedSessions: RecordedSession[] = [
+  {
+    id: 'seed-1',
+    startedAt: now - 45 * 60 * 1000,
+    endedAt: now - 3 * 60 * 1000,
+    durationSeconds: 2520,
+    goodPercentage: 96,
+    avgAngle: 7.2,
+    maxAngle: 16.4,
+    alertCount: 1,
+    sessionType: 'Morning focus',
+  },
+  {
+    id: 'seed-2',
+    startedAt: now - dayMs - 110 * 60 * 1000,
+    endedAt: now - dayMs - 32 * 60 * 1000,
+    durationSeconds: 4680,
+    goodPercentage: 87,
+    avgAngle: 11.4,
+    maxAngle: 24.1,
+    alertCount: 4,
+    sessionType: 'Afternoon work',
+  },
+  {
+    id: 'seed-3',
+    startedAt: now - 2 * dayMs - 55 * 60 * 1000,
+    endedAt: now - 2 * dayMs - 5 * 60 * 1000,
+    durationSeconds: 3000,
+    goodPercentage: 92,
+    avgAngle: 8.9,
+    maxAngle: 19.3,
+    alertCount: 2,
+    sessionType: 'Desk posture check',
+  },
+];
+
 export function PostureProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
+  const [connectionMode, setConnectionModeState] = useState<ConnectionMode>('simulator');
   const [angle, setAngle] = useState(3);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
   const [profile, setProfile] = useState<HealthProfile>(defaultProfile);
+  const [sessions, setSessions] = useState<RecordedSession[]>(seedSessions);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
   const [badStreak, setBadStreak] = useState(0);
   const [alertActive, setAlertActive] = useState(false);
   const [calibrationStep, setCalibrationStep] = useState(0);
+
   const angleRef = useRef(3);
   const statusRef = useRef(status);
 
@@ -80,11 +158,16 @@ export function PostureProvider({ children }: PropsWithChildren) {
     statusRef.current = status;
   }, [status]);
 
+  // Load preferences
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
       if (stored) {
         try {
-          setPreferences({ ...defaultPreferences, ...JSON.parse(stored) });
+          const parsed = { ...defaultPreferences, ...JSON.parse(stored) };
+          setPreferences(parsed);
+          if (isSupabaseConfigured) {
+            syncPreferencesToSupabase(parsed).catch(() => undefined);
+          }
         } catch {
           setPreferences(defaultPreferences);
         }
@@ -92,11 +175,16 @@ export function PostureProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
+  // Load profile
   useEffect(() => {
     AsyncStorage.getItem(PROFILE_STORAGE_KEY).then((stored) => {
       if (stored) {
         try {
-          setProfile({ ...defaultProfile, ...JSON.parse(stored) });
+          const parsed = { ...defaultProfile, ...JSON.parse(stored) };
+          setProfile(parsed);
+          if (isSupabaseConfigured) {
+            syncProfileToSupabase(parsed).catch(() => undefined);
+          }
         } catch {
           setProfile(defaultProfile);
         }
@@ -104,6 +192,68 @@ export function PostureProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
+  // Load connection mode
+  useEffect(() => {
+    AsyncStorage.getItem(MODE_STORAGE_KEY).then((stored) => {
+      if (stored === 'ble' || stored === 'simulator') {
+        setConnectionModeState(stored);
+        bleManager.setMode(stored === 'simulator');
+      }
+    });
+  }, []);
+
+  // Load recorded sessions (AsyncStorage + Supabase)
+  useEffect(() => {
+    AsyncStorage.getItem(SESSIONS_STORAGE_KEY).then(async (stored) => {
+      let local: RecordedSession[] = [];
+      if (stored) {
+        try {
+          local = JSON.parse(stored);
+        } catch {
+          local = [];
+        }
+      }
+
+      if (local.length === 0) {
+        local = seedSessions;
+        AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(seedSessions)).catch(() => undefined);
+      }
+
+      setSessions(local);
+
+      // Merge with Supabase sessions if configured
+      if (isSupabaseConfigured) {
+        const cloudSessions = await fetchSessionsFromSupabase();
+        if (cloudSessions.length > 0) {
+          setSessions((current) => {
+            const map = new Map<string, RecordedSession>();
+            current.forEach((s) => map.set(s.id, s));
+            cloudSessions.forEach((s) => {
+              if (s.id) {
+                map.set(s.id, {
+                  id: s.id,
+                  startedAt: s.startedAt,
+                  endedAt: s.endedAt,
+                  durationSeconds: s.durationSeconds,
+                  goodPercentage: s.goodPercentage,
+                  avgAngle: s.avgAngle,
+                  maxAngle: s.maxAngle,
+                  alertCount: s.alertCount,
+                  sessionType: s.sessionType || 'Session',
+                  notes: s.notes,
+                });
+              }
+            });
+            const merged = Array.from(map.values()).sort((a, b) => b.startedAt - a.startedAt);
+            AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(merged)).catch(() => undefined);
+            return merged;
+          });
+        }
+      }
+    });
+  }, []);
+
+  // Save changes
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(preferences)).catch(() => undefined);
   }, [preferences]);
@@ -113,7 +263,13 @@ export function PostureProvider({ children }: PropsWithChildren) {
   }, [profile]);
 
   useEffect(() => {
+    AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions)).catch(() => undefined);
+  }, [sessions]);
+
+  // Telemetry stream processing
+  useEffect(() => {
     if (status !== 'connected') return;
+
     const interval = setInterval(() => {
       const next = Math.max(0, Math.min(31, angleRef.current + (Math.random() - 0.52) * 2.8));
       angleRef.current = next;
@@ -130,8 +286,15 @@ export function PostureProvider({ children }: PropsWithChildren) {
         return nextStreak;
       });
     }, 200);
+
     return () => clearInterval(interval);
   }, [alertActive, preferences.delay, preferences.threshold, preferences.vibration, status]);
+
+  const setConnectionMode = (mode: ConnectionMode) => {
+    setConnectionModeState(mode);
+    bleManager.setMode(mode === 'simulator');
+    AsyncStorage.setItem(MODE_STORAGE_KEY, mode).catch(() => undefined);
+  };
 
   const connect = () => {
     if (statusRef.current === 'connected') return;
@@ -149,6 +312,35 @@ export function PostureProvider({ children }: PropsWithChildren) {
   };
 
   const disconnect = () => {
+    if (sessionStartedAt && readings.length > 0) {
+      const endedAt = Date.now();
+      const durationSeconds = Math.max(1, Math.round((endedAt - sessionStartedAt) / 1000));
+      const goodCount = readings.filter((r) => r.good).length;
+      const goodPercentage = Math.round((goodCount / readings.length) * 100);
+      const angles = readings.map((r) => r.angle);
+      const avgAngle = Math.round((angles.reduce((a, b) => a + b, 0) / angles.length) * 10) / 10;
+      const maxAngle = Math.round(Math.max(...angles) * 10) / 10;
+
+      const newSession: RecordedSession = {
+        id: 'sess-' + Date.now(),
+        startedAt: sessionStartedAt,
+        endedAt,
+        durationSeconds,
+        goodPercentage,
+        avgAngle,
+        maxAngle,
+        alertCount: badStreak > 0 ? 1 : 0,
+        sessionType: 'Active tracking',
+      };
+
+      setSessions((prev) => [newSession, ...prev]);
+
+      saveSessionToSupabase({
+        ...newSession,
+        readings,
+      }).catch(() => undefined);
+    }
+
     setStatus('disconnected');
     setSessionStartedAt(null);
     setAlertActive(false);
@@ -158,6 +350,10 @@ export function PostureProvider({ children }: PropsWithChildren) {
     if (calibrationStep > 0) return;
     setCalibrationStep(3);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Send calibrate command to wearable bridge
+    bleManager.sendCalibrate().catch(() => undefined);
+
     const timer = setInterval(() => {
       setCalibrationStep((current) => {
         if (current <= 1) {
@@ -175,30 +371,99 @@ export function PostureProvider({ children }: PropsWithChildren) {
   };
 
   const updatePreferences = (next: Partial<Preferences>) => {
-    setPreferences((current) => ({ ...current, ...next }));
+    setPreferences((current) => {
+      const updated = { ...current, ...next };
+      syncPreferencesToSupabase(updated).catch(() => undefined);
+      return updated;
+    });
   };
 
   const updateProfile = (next: HealthProfile) => {
     setProfile(next);
+    syncProfileToSupabase(next).catch(() => undefined);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const value = useMemo(() => ({
-    angle,
-    readings,
-    status,
-    preferences,
-    profile,
-    sessionStartedAt,
-    badStreak,
-    alertActive,
-    calibrationStep,
-    connect,
-    disconnect,
-    calibrate,
-    updatePreferences,
-    updateProfile,
-  }), [alertActive, angle, badStreak, calibrationStep, preferences, profile, readings, sessionStartedAt, status]);
+  const deleteSession = async (id: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    if (isSupabaseConfigured) {
+      deleteSessionFromSupabase(id).catch(() => undefined);
+    }
+  };
+
+  const clearSessions = async () => {
+    setSessions([]);
+    await AsyncStorage.removeItem(SESSIONS_STORAGE_KEY);
+  };
+
+  const refreshSessions = async () => {
+    if (!isSupabaseConfigured) return;
+    const cloudSessions = await fetchSessionsFromSupabase();
+    if (cloudSessions.length > 0) {
+      const mapped = cloudSessions.map((s) => ({
+        id: s.id || 'sess-' + s.startedAt,
+        startedAt: s.startedAt,
+        endedAt: s.endedAt,
+        durationSeconds: s.durationSeconds,
+        goodPercentage: s.goodPercentage,
+        avgAngle: s.avgAngle,
+        maxAngle: s.maxAngle,
+        alertCount: s.alertCount,
+        sessionType: s.sessionType || 'Session',
+        notes: s.notes,
+      }));
+      setSessions(mapped);
+    }
+  };
+
+  const syncWithCloud = async () => {
+    if (!isSupabaseConfigured) return;
+    await Promise.allSettled([
+      syncProfileToSupabase(profile),
+      syncPreferencesToSupabase(preferences),
+      refreshSessions(),
+    ]);
+  };
+
+  const value = useMemo(
+    () => ({
+      angle,
+      readings,
+      status,
+      connectionMode,
+      preferences,
+      profile,
+      sessions,
+      sessionStartedAt,
+      badStreak,
+      alertActive,
+      calibrationStep,
+      isCloudSynced: isSupabaseConfigured,
+      connect,
+      disconnect,
+      calibrate,
+      setConnectionMode,
+      updatePreferences,
+      updateProfile,
+      deleteSession,
+      clearSessions,
+      refreshSessions,
+      syncWithCloud,
+    }),
+    [
+      alertActive,
+      angle,
+      badStreak,
+      calibrationStep,
+      connectionMode,
+      preferences,
+      profile,
+      readings,
+      sessionStartedAt,
+      sessions,
+      status,
+    ]
+  );
 
   return <PostureContext.Provider value={value}>{children}</PostureContext.Provider>;
 }

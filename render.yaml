@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: posture-monitor
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: pnpm install --ignore-scripts && pnpm run build:web && pnpm run build:api
+    startCommand: node artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: EXPO_PUBLIC_SUPABASE_URL
+        value: https://yozbjwtgtoknwyvterfm.supabase.co
+      - key: EXPO_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
