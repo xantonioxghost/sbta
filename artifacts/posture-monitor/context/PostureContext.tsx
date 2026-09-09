@@ -12,6 +12,8 @@ import {
 import { bleManager } from '@/lib/bleManager';
 import { useAuth } from '@/context/AuthContext';
 
+import { SpineType } from '@/lib/exercises';
+
 export type ConnectionStatus = 'disconnected' | 'searching' | 'connected';
 export type ConnectionMode = 'ble' | 'simulator';
 export type Reading = { angle: number; timestamp: number; good: boolean };
@@ -34,6 +36,7 @@ export type HealthProfile = {
   injuries: string;
   conditions: string;
   mobilityLimitations: string;
+  spineType: SpineType;
 };
 
 export type RecordedSession = {
@@ -99,6 +102,7 @@ const defaultProfile: HealthProfile = {
   injuries: '',
   conditions: '',
   mobilityLimitations: '',
+  spineType: 'kyphosis',
 };
 
 export function PostureProvider({ children }: PropsWithChildren) {

@@ -65,6 +65,7 @@ export async function syncProfileToSupabase(profile: HealthProfile, customUserId
       injuries: profile.injuries,
       conditions: profile.conditions,
       mobility_limitations: profile.mobilityLimitations,
+      spine_type: profile.spineType || 'normal',
       updated_at: new Date().toISOString(),
     };
 

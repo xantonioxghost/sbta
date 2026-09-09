@@ -42,17 +42,8 @@ export default function SignUpScreen() {
     setLoading(true);
     setErrorMsg(null);
 
-    const { session, error } = await signUp(email.trim(), password, name.trim());
-    setLoading(false);
-
-    if (error) {
-      setErrorMsg(error);
-    } else if (session) {
-      router.replace('/(tabs)');
-    } else {
-      // Confirmation required or session established
-      router.replace('/(tabs)');
-    }
+    // Redirect to multi-step onboarding questionnaire
+    router.push('/(auth)/onboarding' as any);
   };
 
   return (

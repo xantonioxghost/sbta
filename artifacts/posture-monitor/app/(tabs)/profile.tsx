@@ -5,6 +5,7 @@ import { Icon } from '@/components/Icon';
 import { SectionLabel } from '@/components/SectionLabel';
 import { HealthProfile, usePosture } from '@/context/PostureContext';
 import { useColors } from '@/hooks/useColors';
+import { SPINE_TYPES, SpineType } from '@/lib/exercises';
 
 type FieldProps = {
   label: string;
@@ -45,7 +46,7 @@ export default function ProfileScreen() {
   const [draft, setDraft] = useState<HealthProfile>(profile);
   const [saved, setSaved] = useState(false);
 
-  const update = (key: keyof HealthProfile, value: string) => {
+  const update = (key: keyof HealthProfile, value: any) => {
     setSaved(false);
     setDraft((current) => ({ ...current, [key]: value }));
   };
@@ -68,6 +69,37 @@ export default function ProfileScreen() {
         <Text style={[styles.intro, { color: colors.mutedForeground }]}>
           A little context helps you understand your posture patterns. Add only what feels useful to you.
         </Text>
+      </View>
+
+      <SectionLabel>Spine Posture Type</SectionLabel>
+      <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginBottom: 10 }]}>
+          Select your primary spinal alignment shape:
+        </Text>
+        <View style={{ gap: 8 }}>
+          {SPINE_TYPES.map((st) => {
+            const isSel = draft.spineType === st.id;
+            return (
+              <Pressable
+                key={st.id}
+                onPress={() => update('spineType', st.id)}
+                style={[
+                  styles.spineOptionBtn,
+                  {
+                    backgroundColor: isSel ? colors.secondary : colors.muted,
+                    borderColor: isSel ? colors.primary : colors.border,
+                  },
+                ]}
+              >
+                <View style={styles.spineOptionTop}>
+                  <Text style={[styles.spineOptionTitle, { color: colors.foreground }]}>{st.title}</Text>
+                  {isSel && <Icon name="check" size={16} color={colors.primary} />}
+                </View>
+                <Text style={[styles.spineOptionSub, { color: colors.mutedForeground }]}>{st.subtitle}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <SectionLabel>About you</SectionLabel>
@@ -127,6 +159,10 @@ const styles = StyleSheet.create({
   multiline: { height: 80, paddingTop: 12 },
   row: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
+  spineOptionBtn: { padding: 12, borderRadius: 12, borderWidth: 1 },
+  spineOptionTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  spineOptionTitle: { fontFamily: 'Inter_700Bold', fontSize: 13 },
+  spineOptionSub: { fontFamily: 'Inter_400Regular', fontSize: 11, marginTop: 2 },
   notice: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 14, marginTop: 4 },
   noticeText: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17 },
   save: { marginHorizontal: 22, height: 52, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 },

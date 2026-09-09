@@ -16,7 +16,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarLabelStyle: {
           fontFamily: 'Inter_600SemiBold',
-          fontSize: 11,
+          fontSize: 10,
           marginTop: 2,
         },
         tabBarStyle: {
@@ -43,6 +43,13 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => <Icon name="home" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="exercises"
+        options={{
+          title: 'Exercises',
+          tabBarIcon: ({ color }) => <Icon name="target" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
