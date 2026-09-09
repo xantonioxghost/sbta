@@ -1,7 +1,7 @@
-import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon, IconName } from '@/components/Icon';
 import { SectionLabel } from '@/components/SectionLabel';
 import { useAuth } from '@/context/AuthContext';
 import { usePosture } from '@/context/PostureContext';
@@ -13,7 +13,7 @@ function SettingRow({
   subtitle,
   children,
 }: {
-  icon: keyof typeof Feather.glyphMap;
+  icon: IconName;
   title: string;
   subtitle?: string;
   children?: React.ReactNode;
@@ -22,7 +22,7 @@ function SettingRow({
   return (
     <View style={[styles.row, { borderBottomColor: colors.border }]}>
       <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>
-        <Feather name={icon} size={17} color={colors.primary} />
+        <Icon name={icon} size={17} color={colors.primary} />
       </View>
       <View style={styles.rowCopy}>
         <Text style={[styles.rowTitle, { color: colors.foreground }]}>{title}</Text>
@@ -105,7 +105,7 @@ export default function SettingsScreen() {
         </SettingRow>
         <Pressable onPress={handleSignOut} style={({ pressed }) => [styles.manage, { opacity: pressed ? 0.7 : 1 }]}>
           <Text style={[styles.manageText, { color: colors.destructive }]}>Sign out of account</Text>
-          <Feather name="log-out" size={16} color={colors.destructive} />
+          <Icon name="log-out" size={16} color={colors.destructive} />
         </Pressable>
       </View>
 
@@ -225,7 +225,7 @@ export default function SettingsScreen() {
           <Text style={[styles.manageText, { color: colors.primary }]}>
             {status === 'connected' ? 'Disconnect wearable' : 'Connect wearable'}
           </Text>
-          <Feather name="chevron-right" size={16} color={colors.primary} />
+          <Icon name="chevron-right" size={16} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -247,7 +247,7 @@ export default function SettingsScreen() {
             <Text style={[styles.manageText, { color: colors.primary }]}>
               {syncing ? 'Syncing…' : 'Sync profile & preferences'}
             </Text>
-            <Feather name={syncing ? 'loader' : 'refresh-cw'} size={15} color={colors.primary} />
+            <Icon name={syncing ? 'refresh' : 'refresh'} size={15} color={colors.primary} />
           </Pressable>
         )}
       </View>
@@ -259,7 +259,7 @@ export default function SettingsScreen() {
           style={({ pressed }) => [styles.manage, { opacity: pressed ? 0.7 : 1 }]}
         >
           <Text style={[styles.manageText, { color: colors.destructive }]}>Clear local session history</Text>
-          <Feather name="trash-2" size={16} color={colors.destructive} />
+          <Icon name="trash" size={16} color={colors.destructive} />
         </Pressable>
       </View>
 

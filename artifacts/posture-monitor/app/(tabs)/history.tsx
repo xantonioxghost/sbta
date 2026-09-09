@@ -1,7 +1,7 @@
-import { Feather } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon, IconName } from '@/components/Icon';
 import { SectionLabel } from '@/components/SectionLabel';
 import { RecordedSession, usePosture } from '@/context/PostureContext';
 import { useColors } from '@/hooks/useColors';
@@ -39,7 +39,7 @@ function formatDuration(seconds: number) {
   return `${hours} hr${remainingMins > 0 ? ` ${remainingMins} min` : ''}`;
 }
 
-function getSessionIcon(timestamp: number): keyof typeof Feather.glyphMap {
+function getSessionIcon(timestamp: number): IconName {
   const hour = new Date(timestamp).getHours();
   if (hour >= 5 && hour < 12) return 'sun';
   if (hour >= 12 && hour < 18) return 'coffee';
@@ -51,7 +51,6 @@ export default function HistoryScreen() {
   const colors = useColors();
   const { sessions, deleteSession } = usePosture();
 
-  // Compute weekly Monday-Sunday breakdown
   const { weekBars, avgGoodPercent } = useMemo(() => {
     if (!sessions || sessions.length === 0) {
       return {
@@ -67,7 +66,6 @@ export default function HistoryScreen() {
     );
     const avg = totalWeight > 0 ? Math.round(weightedGood / totalWeight) : 92;
 
-    // Group into Monday (0) - Sunday (6)
     const dayBuckets: { sum: number; count: number }[] = Array.from({ length: 7 }, () => ({
       sum: 0,
       count: 0,
@@ -75,15 +73,13 @@ export default function HistoryScreen() {
 
     sessions.forEach((s) => {
       const d = new Date(s.startedAt);
-      // JS getDay(): 0 = Sun, 1 = Mon ... 6 = Sat
-      const dayIndex = (d.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+      const dayIndex = (d.getDay() + 6) % 7;
       dayBuckets[dayIndex].sum += s.goodPercentage;
       dayBuckets[dayIndex].count += 1;
     });
 
     const bars = dayBuckets.map((bucket, idx) => {
       if (bucket.count > 0) return Math.min(1, Math.max(0.2, bucket.sum / bucket.count / 100));
-      // Fallback visual guideline for days with past habit
       const defaults = [0.72, 0.85, 0.65, 0.88, 0.78, 0.94, 0.8];
       return defaults[idx];
     });
@@ -104,14 +100,14 @@ export default function HistoryScreen() {
         </View>
         <View style={[styles.period, { backgroundColor: colors.secondary }]}>
           <Text style={[styles.periodText, { color: colors.secondaryForeground }]}>This week</Text>
-          <Feather name="chevron-down" size={14} color={colors.secondaryForeground} />
+          <Icon name="chevron-down" size={14} color={colors.secondaryForeground} />
         </View>
       </View>
 
       <View style={[styles.summary, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.summaryTop}>
           <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>AVERAGE GOOD POSTURE</Text>
-          <Feather name="trending-up" size={18} color={colors.primary} />
+          <Icon name="trending-up" size={18} color={colors.primary} />
         </View>
         <Text style={[styles.summaryValue, { color: colors.foreground }]}>{avgGoodPercent}%</Text>
         <Text style={[styles.summarySub, { color: colors.primary }]}>+6% from last week</Text>
@@ -151,7 +147,7 @@ export default function HistoryScreen() {
 
       {sessions.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="activity" size={32} color={colors.mutedForeground} />
+          <Icon name="activity" size={32} color={colors.mutedForeground} />
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No sessions recorded yet</Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
             Connect your PostureBelt from the Home tab to start recording your posture history.
@@ -170,7 +166,7 @@ export default function HistoryScreen() {
               style={[styles.session, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
               <View style={[styles.sessionIcon, { backgroundColor: iconBg }]}>
-                <Feather name={getSessionIcon(session.startedAt)} size={17} color={iconColor} />
+                <Icon name={getSessionIcon(session.startedAt)} size={18} color={iconColor} />
               </View>
               <View style={styles.sessionCopy}>
                 <Text style={[styles.sessionTitle, { color: colors.foreground }]}>
@@ -192,7 +188,7 @@ export default function HistoryScreen() {
                 hitSlop={10}
                 style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.6 : 1 }]}
               >
-                <Feather name="trash-2" size={15} color={colors.mutedForeground} />
+                <Icon name="trash" size={16} color={colors.mutedForeground} />
               </Pressable>
             </View>
           );

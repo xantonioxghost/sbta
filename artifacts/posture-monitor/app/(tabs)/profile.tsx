@@ -1,7 +1,7 @@
-import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon } from '@/components/Icon';
 import { SectionLabel } from '@/components/SectionLabel';
 import { HealthProfile, usePosture } from '@/context/PostureContext';
 import { useColors } from '@/hooks/useColors';
@@ -81,13 +81,13 @@ export default function ProfileScreen() {
         <ProfileField label="Conditions" placeholder="Optional · conditions you want to keep in mind" value={draft.conditions} onChangeText={(value) => update('conditions', value)} multiline />
         <ProfileField label="Mobility limitations" placeholder="Optional · movements or positions to avoid" value={draft.mobilityLimitations} onChangeText={(value) => update('mobilityLimitations', value)} multiline />
         <View style={[styles.notice, { backgroundColor: colors.accent }]}>
-          <Feather name="info" size={16} color={colors.destructive} />
+          <Icon name="alert-circle" size={16} color={colors.destructive} />
           <Text style={[styles.noticeText, { color: colors.accentForeground }]}>This profile is for personal tracking, not diagnosis or medical advice. Talk with a qualified professional about pain, injury, or mobility concerns.</Text>
         </View>
       </View>
 
       <Pressable testID="save-profile-button" onPress={save} style={({ pressed }) => [styles.save, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}>
-        <Feather name={saved ? 'check' : 'save'} size={17} color={colors.primaryForeground} />
+        <Icon name={saved ? 'check' : 'check'} size={17} color={colors.primaryForeground} />
         <Text style={[styles.saveText, { color: colors.primaryForeground }]}>{saved ? 'Profile saved' : 'Save profile'}</Text>
       </Pressable>
       <Text style={[styles.privacy, { color: colors.mutedForeground }]}>Your profile is stored locally on this phone. It is not uploaded or shared.</Text>

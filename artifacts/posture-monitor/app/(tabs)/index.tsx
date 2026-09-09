@@ -1,8 +1,8 @@
-import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon } from '@/components/Icon';
 import { PostureGauge } from '@/components/PostureGauge';
 import { SectionLabel } from '@/components/SectionLabel';
 import { SessionChart } from '@/components/SessionChart';
@@ -39,7 +39,7 @@ export default function HomeScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Stay aligned.</Text>
         </View>
         <Pressable testID="settings-button" onPress={() => router.push('/(tabs)/settings')} style={({ pressed }) => [styles.iconButton, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}>
-          <Feather name="sliders" size={18} color={colors.foreground} />
+          <Icon name="sliders" size={18} color={colors.foreground} />
         </Pressable>
       </View>
 
@@ -49,7 +49,7 @@ export default function HomeScreen() {
           <Text style={[styles.connectionTitle, { color: colors.foreground }]}>{status === 'searching' ? 'Searching for PostureBelt…' : isConnected ? 'PostureBelt connected' : 'PostureBelt not connected'}</Text>
           <Text style={[styles.connectionSub, { color: colors.mutedForeground }]}>{isConnected ? `Tracking for ${duration}` : status === 'searching' ? 'Keep your wearable nearby' : 'Tap to scan for your wearable'}</Text>
         </View>
-        <Feather name={isConnected ? 'x' : 'bluetooth'} size={19} color={isConnected ? colors.mutedForeground : colors.primary} />
+        <Icon name={isConnected ? 'x' : 'bluetooth'} size={19} color={isConnected ? colors.mutedForeground : colors.primary} />
       </Pressable>
 
       <View style={styles.sectionHeader}>
@@ -58,10 +58,12 @@ export default function HomeScreen() {
       </View>
       <View style={[styles.gaugeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <PostureGauge angle={angle} threshold={preferences.threshold} />
-        {alertActive && <View style={[styles.alert, { backgroundColor: colors.accent }]}>
-          <Feather name="bell" size={15} color={colors.destructive} />
-          <Text style={[styles.alertText, { color: colors.accentForeground }]}>Take a breath and gently reset your shoulders</Text>
-        </View>}
+        {alertActive && (
+          <View style={[styles.alert, { backgroundColor: colors.accent }]}>
+            <Icon name="bell" size={15} color={colors.destructive} />
+            <Text style={[styles.alertText, { color: colors.accentForeground }]}>Take a breath and gently reset your shoulders</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.metrics}>
@@ -78,13 +80,13 @@ export default function HomeScreen() {
       <SessionChart readings={readings} />
 
       <View style={styles.actions}>
-        <View>
+        <View style={{ flex: 1 }}>
           <SectionLabel>Baseline</SectionLabel>
           <Text style={[styles.actionTitle, { color: colors.foreground }]}>Reset your straight posture</Text>
           <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>{calibrationStep ? `Hold still… ${calibrationStep}` : 'Sit or stand tall, then calibrate'}</Text>
         </View>
         <Pressable testID="calibrate-button" disabled={!isConnected || calibrationStep > 0} onPress={calibrate} style={({ pressed }) => [styles.calibrate, { backgroundColor: isConnected ? colors.primary : colors.muted, opacity: pressed ? 0.8 : 1 }]}>
-          <Feather name={calibrationStep ? 'loader' : 'crosshair'} size={17} color={isConnected ? colors.primaryForeground : colors.mutedForeground} />
+          <Icon name="crosshair" size={17} color={isConnected ? colors.primaryForeground : colors.mutedForeground} />
           <Text style={[styles.calibrateText, { color: isConnected ? colors.primaryForeground : colors.mutedForeground }]}>{calibrationStep ? 'Calibrating' : 'Calibrate'}</Text>
         </Pressable>
       </View>
