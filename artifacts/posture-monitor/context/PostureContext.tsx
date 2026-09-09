@@ -100,44 +100,6 @@ const defaultProfile: HealthProfile = {
   mobilityLimitations: '',
 };
 
-const now = Date.now();
-const dayMs = 24 * 60 * 60 * 1000;
-const seedSessions: RecordedSession[] = [
-  {
-    id: 'seed-1',
-    startedAt: now - 45 * 60 * 1000,
-    endedAt: now - 3 * 60 * 1000,
-    durationSeconds: 2520,
-    goodPercentage: 96,
-    avgAngle: 7.2,
-    maxAngle: 16.4,
-    alertCount: 1,
-    sessionType: 'Morning focus',
-  },
-  {
-    id: 'seed-2',
-    startedAt: now - dayMs - 110 * 60 * 1000,
-    endedAt: now - dayMs - 32 * 60 * 1000,
-    durationSeconds: 4680,
-    goodPercentage: 87,
-    avgAngle: 11.4,
-    maxAngle: 24.1,
-    alertCount: 4,
-    sessionType: 'Afternoon work',
-  },
-  {
-    id: 'seed-3',
-    startedAt: now - 2 * dayMs - 55 * 60 * 1000,
-    endedAt: now - 2 * dayMs - 5 * 60 * 1000,
-    durationSeconds: 3000,
-    goodPercentage: 92,
-    avgAngle: 8.9,
-    maxAngle: 19.3,
-    alertCount: 2,
-    sessionType: 'Desk posture check',
-  },
-];
-
 export function PostureProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [connectionMode, setConnectionModeState] = useState<ConnectionMode>('simulator');
@@ -145,7 +107,7 @@ export function PostureProvider({ children }: PropsWithChildren) {
   const [readings, setReadings] = useState<Reading[]>([]);
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
   const [profile, setProfile] = useState<HealthProfile>(defaultProfile);
-  const [sessions, setSessions] = useState<RecordedSession[]>(seedSessions);
+  const [sessions, setSessions] = useState<RecordedSession[]>([]);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
   const [badStreak, setBadStreak] = useState(0);
   const [alertActive, setAlertActive] = useState(false);
@@ -212,11 +174,6 @@ export function PostureProvider({ children }: PropsWithChildren) {
         } catch {
           local = [];
         }
-      }
-
-      if (local.length === 0) {
-        local = seedSessions;
-        AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(seedSessions)).catch(() => undefined);
       }
 
       setSessions(local);
