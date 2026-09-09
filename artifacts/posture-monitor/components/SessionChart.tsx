@@ -43,7 +43,7 @@ export function SessionChart({ readings }: { readings: Reading[] }) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 22, padding: 18, marginTop: 18 },
+  card: { borderWidth: 1, borderRadius: 22, padding: 18, marginTop: 18, marginHorizontal: 22 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   title: { fontFamily: 'Inter_700Bold', fontSize: 16 },
   subtle: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 4 },

@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
@@ -39,7 +39,7 @@ export function PostureGauge({ angle, threshold }: Props) {
         <Text style={[styles.label, { color: colors.mutedForeground }]}>deviation</Text>
       </View>
       <View style={[styles.statusPill, { backgroundColor: good ? colors.secondary : colors.accent }]}>
-        <Feather name={good ? 'check' : 'activity'} size={14} color={stateColor} />
+        <Icon name={good ? 'check' : 'activity'} size={14} color={stateColor} />
         <Text style={[styles.statusText, { color: stateColor }]}>{good ? 'Good posture' : 'Ease back'}</Text>
       </View>
     </View>
