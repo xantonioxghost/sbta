@@ -5,6 +5,7 @@ import { Icon } from '@/components/Icon';
 import { SectionLabel } from '@/components/SectionLabel';
 import { HealthProfile, usePosture } from '@/context/PostureContext';
 import { useColors } from '@/hooks/useColors';
+import { SpineVisual } from '@/components/SpineVisual';
 import { SPINE_TYPES, SpineType } from '@/lib/exercises';
 
 type FieldProps = {
@@ -76,7 +77,7 @@ export default function ProfileScreen() {
         <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginBottom: 10 }]}>
           Select your primary spinal alignment shape:
         </Text>
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: 10 }}>
           {SPINE_TYPES.map((st) => {
             const isSel = draft.spineType === st.id;
             return (
@@ -91,11 +92,18 @@ export default function ProfileScreen() {
                   },
                 ]}
               >
-                <View style={styles.spineOptionTop}>
-                  <Text style={[styles.spineOptionTitle, { color: colors.foreground }]}>{st.title}</Text>
-                  {isSel && <Icon name="check" size={16} color={colors.primary} />}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <View style={[styles.spineVisualWrapper, { backgroundColor: isSel ? colors.card : colors.secondary }]}>
+                    <SpineVisual type={st.id} size={32} active={isSel} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.spineOptionTop}>
+                      <Text style={[styles.spineOptionTitle, { color: colors.foreground }]}>{st.title}</Text>
+                      {isSel && <Icon name="check" size={16} color={colors.primary} />}
+                    </View>
+                    <Text style={[styles.spineOptionSub, { color: colors.mutedForeground }]}>{st.subtitle}</Text>
+                  </View>
                 </View>
-                <Text style={[styles.spineOptionSub, { color: colors.mutedForeground }]}>{st.subtitle}</Text>
               </Pressable>
             );
           })}
@@ -159,7 +167,8 @@ const styles = StyleSheet.create({
   multiline: { height: 80, paddingTop: 12 },
   row: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
-  spineOptionBtn: { padding: 12, borderRadius: 12, borderWidth: 1 },
+  spineOptionBtn: { padding: 12, borderRadius: 14, borderWidth: 1 },
+  spineVisualWrapper: { width: 44, height: 56, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   spineOptionTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   spineOptionTitle: { fontFamily: 'Inter_700Bold', fontSize: 13 },
   spineOptionSub: { fontFamily: 'Inter_400Regular', fontSize: 11, marginTop: 2 },

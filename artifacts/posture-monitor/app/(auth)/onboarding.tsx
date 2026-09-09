@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
+import { SpineVisual } from '@/components/SpineVisual';
 import { useAuth } from '@/context/AuthContext';
 import { usePosture } from '@/context/PostureContext';
 import { useColors } from '@/hooks/useColors';
@@ -292,20 +293,27 @@ export default function OnboardingScreen() {
                       },
                     ]}
                   >
-                    <View style={styles.spineCardTop}>
-                      <Text style={[styles.spineCardTitle, { color: colors.foreground }]}>{type.title}</Text>
-                      <View style={[styles.badge, { backgroundColor: isSelected ? colors.primary : colors.muted }]}>
-                        <Text
-                          style={[
-                            styles.badgeText,
-                            { color: isSelected ? colors.primaryForeground : colors.mutedForeground },
-                          ]}
-                        >
-                          {type.badge}
-                        </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                      <View style={[styles.spineVisualWrapper, { backgroundColor: isSelected ? colors.card : colors.secondary }]}>
+                        <SpineVisual type={type.id} size={34} active={isSelected} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <View style={styles.spineCardTop}>
+                          <Text style={[styles.spineCardTitle, { color: colors.foreground }]}>{type.title}</Text>
+                          <View style={[styles.badge, { backgroundColor: isSelected ? colors.primary : colors.muted }]}>
+                            <Text
+                              style={[
+                                styles.badgeText,
+                                { color: isSelected ? colors.primaryForeground : colors.mutedForeground },
+                              ]}
+                            >
+                              {type.badge}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={[styles.spineCardSub, { color: colors.mutedForeground }]}>{type.description}</Text>
                       </View>
                     </View>
-                    <Text style={[styles.spineCardSub, { color: colors.mutedForeground }]}>{type.description}</Text>
                   </Pressable>
                 );
               })}
@@ -440,7 +448,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
   spineList: { gap: 12, marginBottom: 24 },
-  spineCard: { padding: 16, borderRadius: 16, borderWidth: 1, gap: 6 },
+  spineCard: { padding: 14, borderRadius: 16, borderWidth: 1 },
+  spineVisualWrapper: { width: 44, height: 58, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   spineCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   spineCardTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
   spineCardSub: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17 },

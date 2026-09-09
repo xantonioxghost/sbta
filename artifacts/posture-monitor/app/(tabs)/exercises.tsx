@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { SectionLabel } from '@/components/SectionLabel';
+import { SpineVisual } from '@/components/SpineVisual';
 import { usePosture } from '@/context/PostureContext';
 import { useColors } from '@/hooks/useColors';
 import { Exercise, getExercisesForSpineType, SPINE_TYPES, SpineType } from '@/lib/exercises';
@@ -67,14 +68,21 @@ export default function ExercisesScreen() {
 
       {/* Spine Type Overview Banner */}
       <View style={[styles.banner, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.bannerTop}>
-          <Text style={[styles.bannerLabel, { color: colors.mutedForeground }]}>YOUR SPINE CLASSIFICATION</Text>
-          <Pressable onPress={() => setShowSpineModal(true)}>
-            <Text style={[styles.changeText, { color: colors.primary }]}>Change</Text>
-          </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={[styles.spineVisualWrapper, { backgroundColor: colors.secondary }]}>
+            <SpineVisual type={spineOption.id} size={36} active color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.bannerTop}>
+              <Text style={[styles.bannerLabel, { color: colors.mutedForeground }]}>YOUR SPINE CLASSIFICATION</Text>
+              <Pressable onPress={() => setShowSpineModal(true)}>
+                <Text style={[styles.changeText, { color: colors.primary }]}>Change</Text>
+              </Pressable>
+            </View>
+            <Text style={[styles.bannerTitle, { color: colors.foreground }]}>{spineOption.title}</Text>
+            <Text style={[styles.bannerSub, { color: colors.mutedForeground }]}>{spineOption.description}</Text>
+          </View>
         </View>
-        <Text style={[styles.bannerTitle, { color: colors.foreground }]}>{spineOption.title}</Text>
-        <Text style={[styles.bannerSub, { color: colors.mutedForeground }]}>{spineOption.description}</Text>
       </View>
 
       {/* Daily Progress Widget */}
@@ -273,13 +281,20 @@ export default function ExercisesScreen() {
                       },
                     ]}
                   >
-                    <View style={styles.spineCardTop}>
-                      <Text style={[styles.spineCardTitle, { color: colors.foreground }]}>{type.title}</Text>
-                      {isSel && <Icon name="check" size={16} color={colors.primary} />}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                      <View style={[styles.spineVisualWrapper, { backgroundColor: isSel ? colors.card : colors.secondary }]}>
+                        <SpineVisual type={type.id} size={32} active={isSel} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.spineCardTop}>
+                          <Text style={[styles.spineCardTitle, { color: colors.foreground }]}>{type.title}</Text>
+                          {isSel && <Icon name="check" size={16} color={colors.primary} />}
+                        </View>
+                        <Text style={[styles.spineCardSub, { color: colors.mutedForeground }]}>
+                          {type.description}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={[styles.spineCardSub, { color: colors.mutedForeground }]}>
-                      {type.description}
-                    </Text>
                   </Pressable>
                 );
               })}
@@ -323,6 +338,7 @@ const styles = StyleSheet.create({
   bannerLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1 },
   changeText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
   bannerTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, marginBottom: 4 },
+  spineVisualWrapper: { width: 48, height: 60, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   bannerSub: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17 },
   progressCard: {
     marginHorizontal: 22,

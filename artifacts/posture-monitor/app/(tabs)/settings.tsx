@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconName } from '@/components/Icon';
 import { SectionLabel } from '@/components/SectionLabel';
@@ -64,21 +64,33 @@ export default function SettingsScreen() {
   };
 
   const handleClearHistory = () => {
-    Alert.alert(
-      'Clear Session History',
-      'Are you sure you want to clear your local session history? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear', style: 'destructive', onPress: () => clearSessions() },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to clear your local session history? This cannot be undone.')) {
+        clearSessions();
+      }
+    } else {
+      Alert.alert(
+        'Clear Session History',
+        'Are you sure you want to clear your local session history? This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Clear', style: 'destructive', onPress: () => clearSessions() },
+        ]
+      );
+    }
   };
 
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out of your account?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => signOut() },
-    ]);
+  const handleSignOut = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to sign out of your account?')) {
+        await signOut();
+      }
+    } else {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out of your account?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: () => signOut() },
+      ]);
+    }
   };
 
   return (
