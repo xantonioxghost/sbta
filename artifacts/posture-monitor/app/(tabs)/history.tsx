@@ -95,7 +95,7 @@ export default function HistoryScreen() {
     >
       <View style={styles.header}>
         <View>
-          <SectionLabel>Your progress</SectionLabel>
+          <Text style={[styles.eyebrow, { color: colors.primary }]}>YOUR PROGRESS</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>History</Text>
         </View>
         <View style={[styles.period, { backgroundColor: colors.secondary }]}>
@@ -207,7 +207,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginBottom: 22,
   },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 30, letterSpacing: -0.6, marginTop: 8 },
+  title: { fontFamily: 'Inter_700Bold', fontSize: 30, letterSpacing: -0.6, marginTop: 4 },
+  eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1.3, marginBottom: 4 },
   period: {
     paddingHorizontal: 12,
     paddingVertical: 9,

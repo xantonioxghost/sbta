@@ -4,9 +4,17 @@ import { useColors } from '@/hooks/useColors';
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   const colors = useColors();
-  return <Text style={[styles.label, { color: colors.mutedForeground }]}>{children}</Text>;
+  return <Text style={[styles.label, { color: colors.primary }]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 1.1, textTransform: 'uppercase' },
+  label: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    paddingHorizontal: 22,
+    marginTop: 18,
+    marginBottom: 6,
+  },
 });

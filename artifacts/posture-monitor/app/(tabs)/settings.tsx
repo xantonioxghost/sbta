@@ -88,7 +88,7 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <SectionLabel>Make it yours</SectionLabel>
+        <Text style={[styles.eyebrow, { color: colors.primary }]}>MAKE IT YOURS</Text>
         <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
       </View>
 
@@ -274,8 +274,9 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { paddingHorizontal: 22, marginBottom: 28 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 30, letterSpacing: -0.6, marginTop: 8 },
+  header: { paddingHorizontal: 22, marginBottom: 20 },
+  eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1.3, marginBottom: 4 },
+  title: { fontFamily: 'Inter_700Bold', fontSize: 30, letterSpacing: -0.6, marginTop: 4 },
   group: {
     marginHorizontal: 22,
     borderWidth: 1,

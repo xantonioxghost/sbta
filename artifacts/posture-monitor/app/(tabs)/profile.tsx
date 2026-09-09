@@ -28,7 +28,11 @@ function ProfileField({ label, placeholder, value, onChangeText, multiline = fal
         keyboardType={keyboardType}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
-        style={[styles.input, multiline && styles.multiline, { color: colors.foreground, backgroundColor: colors.background, borderColor: colors.border }]}
+        style={[
+          styles.input,
+          multiline && styles.multiline,
+          { color: colors.foreground, backgroundColor: colors.muted, borderColor: colors.border },
+        ]}
       />
     </View>
   );
@@ -52,11 +56,18 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={[styles.screen, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 112 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={[styles.screen, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: 112 }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
-        <SectionLabel>Private to this phone</SectionLabel>
+        <Text style={[styles.eyebrow, { color: colors.primary }]}>PRIVATE TO THIS PHONE</Text>
         <Text style={[styles.title, { color: colors.foreground }]}>Health profile</Text>
-        <Text style={[styles.intro, { color: colors.mutedForeground }]}>A little context helps you understand your posture patterns. Add only what feels useful to you.</Text>
+        <Text style={[styles.intro, { color: colors.mutedForeground }]}>
+          A little context helps you understand your posture patterns. Add only what feels useful to you.
+        </Text>
       </View>
 
       <SectionLabel>About you</SectionLabel>
@@ -82,34 +93,43 @@ export default function ProfileScreen() {
         <ProfileField label="Mobility limitations" placeholder="Optional · movements or positions to avoid" value={draft.mobilityLimitations} onChangeText={(value) => update('mobilityLimitations', value)} multiline />
         <View style={[styles.notice, { backgroundColor: colors.accent }]}>
           <Icon name="alert-circle" size={16} color={colors.destructive} />
-          <Text style={[styles.noticeText, { color: colors.accentForeground }]}>This profile is for personal tracking, not diagnosis or medical advice. Talk with a qualified professional about pain, injury, or mobility concerns.</Text>
+          <Text style={[styles.noticeText, { color: colors.accentForeground }]}>
+            This profile is for personal tracking, not diagnosis or medical advice. Talk with a qualified professional about pain, injury, or mobility concerns.
+          </Text>
         </View>
       </View>
 
-      <Pressable testID="save-profile-button" onPress={save} style={({ pressed }) => [styles.save, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}>
-        <Icon name={saved ? 'check' : 'check'} size={17} color={colors.primaryForeground} />
+      <Pressable
+        testID="save-profile-button"
+        onPress={save}
+        style={({ pressed }) => [styles.save, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
+      >
+        <Icon name="check" size={18} color={colors.primaryForeground} />
         <Text style={[styles.saveText, { color: colors.primaryForeground }]}>{saved ? 'Profile saved' : 'Save profile'}</Text>
       </Pressable>
-      <Text style={[styles.privacy, { color: colors.mutedForeground }]}>Your profile is stored locally on this phone. It is not uploaded or shared.</Text>
+      <Text style={[styles.privacy, { color: colors.mutedForeground }]}>
+        Your profile is stored locally on this phone. It is not uploaded or shared.
+      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { paddingHorizontal: 22, marginBottom: 26 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 30, letterSpacing: -0.6, marginTop: 8 },
-  intro: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 19, marginTop: 10, maxWidth: 345 },
-  group: { marginHorizontal: 22, borderWidth: 1, borderRadius: 20, padding: 16, marginTop: 10, marginBottom: 27 },
-  field: { marginBottom: 15 },
-  fieldLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 11, marginBottom: 7 },
-  input: { borderWidth: 1, borderRadius: 13, paddingHorizontal: 13, height: 44, fontFamily: 'Inter_400Regular', fontSize: 13 },
-  multiline: { height: 76, paddingTop: 12 },
-  row: { flexDirection: 'row', gap: 10 },
+  header: { paddingHorizontal: 22, marginBottom: 12 },
+  eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1.3, marginBottom: 6 },
+  title: { fontFamily: 'Inter_700Bold', fontSize: 32, letterSpacing: -0.7 },
+  intro: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 19, marginTop: 8 },
+  group: { marginHorizontal: 22, borderWidth: 1, borderRadius: 20, padding: 18, marginTop: 6, marginBottom: 20 },
+  field: { marginBottom: 16 },
+  fieldLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 8 },
+  input: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, height: 48, fontFamily: 'Inter_400Regular', fontSize: 14 },
+  multiline: { height: 80, paddingTop: 12 },
+  row: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
-  notice: { flexDirection: 'row', gap: 9, padding: 12, borderRadius: 13, marginTop: 2 },
-  noticeText: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 16 },
-  save: { marginHorizontal: 22, height: 50, borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  saveText: { fontFamily: 'Inter_700Bold', fontSize: 13 },
-  privacy: { fontFamily: 'Inter_400Regular', fontSize: 11, textAlign: 'center', marginHorizontal: 36, marginTop: 12, lineHeight: 16 },
+  notice: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 14, marginTop: 4 },
+  noticeText: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17 },
+  save: { marginHorizontal: 22, height: 52, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 },
+  saveText: { fontFamily: 'Inter_700Bold', fontSize: 14 },
+  privacy: { fontFamily: 'Inter_400Regular', fontSize: 12, textAlign: 'center', marginHorizontal: 36, marginTop: 14, lineHeight: 18 },
 });
