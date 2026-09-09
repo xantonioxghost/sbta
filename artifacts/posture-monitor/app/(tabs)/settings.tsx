@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SectionLabel } from '@/components/SectionLabel';
+import { useAuth } from '@/context/AuthContext';
 import { usePosture } from '@/context/PostureContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -35,6 +36,7 @@ function SettingRow({
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { user, signOut } = useAuth();
   const {
     preferences,
     updatePreferences,
@@ -72,6 +74,13 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out of your account?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: () => signOut() },
+    ]);
+  };
+
   return (
     <ScrollView
       style={[styles.screen, { backgroundColor: colors.background }]}
@@ -81,6 +90,23 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <SectionLabel>Make it yours</SectionLabel>
         <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
+      </View>
+
+      <SectionLabel>Account</SectionLabel>
+      <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <SettingRow
+          icon="user"
+          title={user?.user_metadata?.name || 'Account'}
+          subtitle={user?.email || 'Logged in user'}
+        >
+          <View style={[styles.status, { backgroundColor: colors.secondary }]}>
+            <Text style={[styles.statusText, { color: colors.primary }]}>Active</Text>
+          </View>
+        </SettingRow>
+        <Pressable onPress={handleSignOut} style={({ pressed }) => [styles.manage, { opacity: pressed ? 0.7 : 1 }]}>
+          <Text style={[styles.manageText, { color: colors.destructive }]}>Sign out of account</Text>
+          <Feather name="log-out" size={16} color={colors.destructive} />
+        </Pressable>
       </View>
 
       <SectionLabel>Alerts</SectionLabel>

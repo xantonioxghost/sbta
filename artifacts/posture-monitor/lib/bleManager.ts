@@ -29,7 +29,7 @@ export class PostureBeltBLEManager {
   private onTelemetryCallback?: (data: BLETelemetry) => void;
   private onStatusChangeCallback?: (status: BLEStatus) => void;
   private isSimulationMode = false;
-  private simulationInterval?: NodeJS.Timeout;
+  private simulationInterval?: ReturnType<typeof setInterval>;
   private simAngle = 3;
 
   constructor(simulationMode = false) {

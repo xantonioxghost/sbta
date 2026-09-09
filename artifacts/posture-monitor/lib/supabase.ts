@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { HealthProfile, Preferences } from '@/context/PostureContext';
+import { AUTH_TOKEN_KEY } from '@/lib/auth';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -9,13 +10,14 @@ export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 const USER_ID_STORAGE_KEY = '@posture-monitor/supabase-user-id';
 
 /**
- * Gets or creates an anonymous UUID for local-to-cloud mapping.
+ * Gets customUserId or stored anonymous UUID.
  */
-export async function getOrCreateLocalUserId(): Promise<string> {
+export async function getUserId(customUserId?: string | null): Promise<string> {
+  if (customUserId) return customUserId;
+
   const existing = await AsyncStorage.getItem(USER_ID_STORAGE_KEY);
   if (existing) return existing;
 
-  // Generate a random UUID v4
   const newId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
@@ -29,11 +31,14 @@ export async function getOrCreateLocalUserId(): Promise<string> {
 /**
  * Common headers for Supabase PostgREST API
  */
-function getHeaders(preferRepresentation = false) {
+async function getHeaders(preferRepresentation = false) {
+  const userToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  const authHeader = userToken ? `Bearer ${userToken}` : `Bearer ${SUPABASE_ANON_KEY}`;
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    Authorization: authHeader,
   };
   if (preferRepresentation) {
     headers.Prefer = 'return=representation';
@@ -44,11 +49,11 @@ function getHeaders(preferRepresentation = false) {
 /**
  * Syncs user health profile to Supabase.
  */
-export async function syncProfileToSupabase(profile: HealthProfile): Promise<boolean> {
+export async function syncProfileToSupabase(profile: HealthProfile, customUserId?: string | null): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
 
   try {
-    const userId = await getOrCreateLocalUserId();
+    const userId = await getUserId(customUserId);
     const payload = {
       id: userId,
       name: profile.name,
@@ -63,10 +68,11 @@ export async function syncProfileToSupabase(profile: HealthProfile): Promise<boo
       updated_at: new Date().toISOString(),
     };
 
+    const headers = await getHeaders();
     const response = await fetch(`${SUPABASE_URL}/rest/v1/profiles?on_conflict=id`, {
       method: 'POST',
       headers: {
-        ...getHeaders(),
+        ...headers,
         Prefer: 'resolution=merge-duplicates',
       },
       body: JSON.stringify(payload),
@@ -82,11 +88,11 @@ export async function syncProfileToSupabase(profile: HealthProfile): Promise<boo
 /**
  * Syncs user preferences (alert thresholds, delay) to Supabase.
  */
-export async function syncPreferencesToSupabase(preferences: Preferences): Promise<boolean> {
+export async function syncPreferencesToSupabase(preferences: Preferences, customUserId?: string | null): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
 
   try {
-    const userId = await getOrCreateLocalUserId();
+    const userId = await getUserId(customUserId);
     const payload = {
       user_id: userId,
       threshold: preferences.threshold,
@@ -97,10 +103,11 @@ export async function syncPreferencesToSupabase(preferences: Preferences): Promi
       updated_at: new Date().toISOString(),
     };
 
+    const headers = await getHeaders();
     const response = await fetch(`${SUPABASE_URL}/rest/v1/user_preferences?on_conflict=user_id`, {
       method: 'POST',
       headers: {
-        ...getHeaders(),
+        ...headers,
         Prefer: 'resolution=merge-duplicates',
       },
       body: JSON.stringify(payload),
@@ -130,11 +137,11 @@ export type PostureSessionPayload = {
 /**
  * Records a completed posture tracking session to Supabase.
  */
-export async function saveSessionToSupabase(session: PostureSessionPayload): Promise<string | null> {
+export async function saveSessionToSupabase(session: PostureSessionPayload, customUserId?: string | null): Promise<string | null> {
   if (!isSupabaseConfigured) return null;
 
   try {
-    const userId = await getOrCreateLocalUserId();
+    const userId = await getUserId(customUserId);
     const payload = {
       user_id: userId,
       started_at: new Date(session.startedAt).toISOString(),
@@ -148,9 +155,10 @@ export async function saveSessionToSupabase(session: PostureSessionPayload): Pro
       notes: session.notes || null,
     };
 
+    const headers = await getHeaders(true);
     const response = await fetch(`${SUPABASE_URL}/rest/v1/posture_sessions`, {
       method: 'POST',
-      headers: getHeaders(true),
+      headers,
       body: JSON.stringify(payload),
     });
 
@@ -159,7 +167,6 @@ export async function saveSessionToSupabase(session: PostureSessionPayload): Pro
     const data = await response.json();
     const sessionId = data[0]?.id;
 
-    // Subsample readings for chart playback if available
     if (sessionId && session.readings && session.readings.length > 0) {
       const step = Math.max(1, Math.floor(session.readings.length / 50));
       const samples = session.readings
@@ -171,9 +178,10 @@ export async function saveSessionToSupabase(session: PostureSessionPayload): Pro
           good: r.good,
         }));
 
+      const sampleHeaders = await getHeaders();
       await fetch(`${SUPABASE_URL}/rest/v1/posture_readings`, {
         method: 'POST',
-        headers: getHeaders(),
+        headers: sampleHeaders,
         body: JSON.stringify(samples),
       }).catch(() => undefined);
     }
@@ -188,16 +196,17 @@ export async function saveSessionToSupabase(session: PostureSessionPayload): Pro
 /**
  * Fetches recorded sessions from Supabase for this user
  */
-export async function fetchSessionsFromSupabase(): Promise<PostureSessionPayload[]> {
+export async function fetchSessionsFromSupabase(customUserId?: string | null): Promise<PostureSessionPayload[]> {
   if (!isSupabaseConfigured) return [];
 
   try {
-    const userId = await getOrCreateLocalUserId();
+    const userId = await getUserId(customUserId);
+    const headers = await getHeaders();
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/posture_sessions?user_id=eq.${userId}&order=started_at.desc&limit=50`,
       {
         method: 'GET',
-        headers: getHeaders(),
+        headers,
       }
     );
 
@@ -228,9 +237,10 @@ export async function deleteSessionFromSupabase(sessionId: string): Promise<bool
   if (!isSupabaseConfigured) return false;
 
   try {
+    const headers = await getHeaders();
     const response = await fetch(`${SUPABASE_URL}/rest/v1/posture_sessions?id=eq.${sessionId}`, {
       method: 'DELETE',
-      headers: getHeaders(),
+      headers,
     });
     return response.ok;
   } catch {

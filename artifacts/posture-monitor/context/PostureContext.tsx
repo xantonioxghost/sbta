@@ -10,6 +10,7 @@ import {
   syncProfileToSupabase,
 } from '@/lib/supabase';
 import { bleManager } from '@/lib/bleManager';
+import { useAuth } from '@/context/AuthContext';
 
 export type ConnectionStatus = 'disconnected' | 'searching' | 'connected';
 export type ConnectionMode = 'ble' | 'simulator';
@@ -101,6 +102,9 @@ const defaultProfile: HealthProfile = {
 };
 
 export function PostureProvider({ children }: PropsWithChildren) {
+  const { user } = useAuth();
+  const userId = user?.id || null;
+
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [connectionMode, setConnectionModeState] = useState<ConnectionMode>('simulator');
   const [angle, setAngle] = useState(3);
@@ -120,6 +124,13 @@ export function PostureProvider({ children }: PropsWithChildren) {
     statusRef.current = status;
   }, [status]);
 
+  // Sync profile name from Auth if not set
+  useEffect(() => {
+    if (user?.user_metadata?.name && !profile.name) {
+      setProfile((prev) => ({ ...prev, name: user.user_metadata?.name || '' }));
+    }
+  }, [user]);
+
   // Load preferences
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
@@ -128,14 +139,14 @@ export function PostureProvider({ children }: PropsWithChildren) {
           const parsed = { ...defaultPreferences, ...JSON.parse(stored) };
           setPreferences(parsed);
           if (isSupabaseConfigured) {
-            syncPreferencesToSupabase(parsed).catch(() => undefined);
+            syncPreferencesToSupabase(parsed, userId).catch(() => undefined);
           }
         } catch {
           setPreferences(defaultPreferences);
         }
       }
     });
-  }, []);
+  }, [userId]);
 
   // Load profile
   useEffect(() => {
@@ -143,16 +154,19 @@ export function PostureProvider({ children }: PropsWithChildren) {
       if (stored) {
         try {
           const parsed = { ...defaultProfile, ...JSON.parse(stored) };
+          if (user?.user_metadata?.name && !parsed.name) {
+            parsed.name = user.user_metadata.name;
+          }
           setProfile(parsed);
           if (isSupabaseConfigured) {
-            syncProfileToSupabase(parsed).catch(() => undefined);
+            syncProfileToSupabase(parsed, userId).catch(() => undefined);
           }
         } catch {
           setProfile(defaultProfile);
         }
       }
     });
-  }, []);
+  }, [userId]);
 
   // Load connection mode
   useEffect(() => {
@@ -178,9 +192,9 @@ export function PostureProvider({ children }: PropsWithChildren) {
 
       setSessions(local);
 
-      // Merge with Supabase sessions if configured
+      // Fetch from Supabase for this authenticated user
       if (isSupabaseConfigured) {
-        const cloudSessions = await fetchSessionsFromSupabase();
+        const cloudSessions = await fetchSessionsFromSupabase(userId);
         if (cloudSessions.length > 0) {
           setSessions((current) => {
             const map = new Map<string, RecordedSession>();
@@ -208,7 +222,7 @@ export function PostureProvider({ children }: PropsWithChildren) {
         }
       }
     });
-  }, []);
+  }, [userId]);
 
   // Save changes
   useEffect(() => {
@@ -292,10 +306,13 @@ export function PostureProvider({ children }: PropsWithChildren) {
 
       setSessions((prev) => [newSession, ...prev]);
 
-      saveSessionToSupabase({
-        ...newSession,
-        readings,
-      }).catch(() => undefined);
+      saveSessionToSupabase(
+        {
+          ...newSession,
+          readings,
+        },
+        userId
+      ).catch(() => undefined);
     }
 
     setStatus('disconnected');
@@ -308,7 +325,6 @@ export function PostureProvider({ children }: PropsWithChildren) {
     setCalibrationStep(3);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // Send calibrate command to wearable bridge
     bleManager.sendCalibrate().catch(() => undefined);
 
     const timer = setInterval(() => {
@@ -330,14 +346,14 @@ export function PostureProvider({ children }: PropsWithChildren) {
   const updatePreferences = (next: Partial<Preferences>) => {
     setPreferences((current) => {
       const updated = { ...current, ...next };
-      syncPreferencesToSupabase(updated).catch(() => undefined);
+      syncPreferencesToSupabase(updated, userId).catch(() => undefined);
       return updated;
     });
   };
 
   const updateProfile = (next: HealthProfile) => {
     setProfile(next);
-    syncProfileToSupabase(next).catch(() => undefined);
+    syncProfileToSupabase(next, userId).catch(() => undefined);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -355,7 +371,7 @@ export function PostureProvider({ children }: PropsWithChildren) {
 
   const refreshSessions = async () => {
     if (!isSupabaseConfigured) return;
-    const cloudSessions = await fetchSessionsFromSupabase();
+    const cloudSessions = await fetchSessionsFromSupabase(userId);
     if (cloudSessions.length > 0) {
       const mapped = cloudSessions.map((s) => ({
         id: s.id || 'sess-' + s.startedAt,
@@ -376,8 +392,8 @@ export function PostureProvider({ children }: PropsWithChildren) {
   const syncWithCloud = async () => {
     if (!isSupabaseConfigured) return;
     await Promise.allSettled([
-      syncProfileToSupabase(profile),
-      syncPreferencesToSupabase(preferences),
+      syncProfileToSupabase(profile, userId),
+      syncPreferencesToSupabase(preferences, userId),
       refreshSessions(),
     ]);
   };
