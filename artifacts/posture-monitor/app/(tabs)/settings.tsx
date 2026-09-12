@@ -121,6 +121,40 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
+      <SectionLabel>Appearance</SectionLabel>
+      <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <SettingRow
+          icon="sun"
+          title="Theme Mode"
+          subtitle="Switch between Light, Dark, or System mode"
+        >
+          <Text style={[styles.rowValue, { color: colors.primary, textTransform: 'capitalize' }]}>
+            {preferences.theme || 'light'}
+          </Text>
+        </SettingRow>
+        <View style={styles.chips}>
+          {(['light', 'dark', 'system'] as const).map((mode) => (
+            <Pressable
+              key={mode}
+              onPress={() => updatePreferences({ theme: mode })}
+              style={[
+                styles.chip,
+                { backgroundColor: (preferences.theme || 'light') === mode ? colors.primary : colors.muted },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: (preferences.theme || 'light') === mode ? colors.primaryForeground : colors.mutedForeground, textTransform: 'capitalize' },
+                ]}
+              >
+                {mode}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
       <SectionLabel>Alerts</SectionLabel>
       <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <SettingRow

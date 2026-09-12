@@ -1,23 +1,23 @@
 const colors = {
   light: {
-    text: '#F0F6FF',
-    tint: '#00E5FF',
-    background: '#070C14',
-    foreground: '#F0F6FF',
-    card: '#0F1726',
-    cardForeground: '#F0F6FF',
-    primary: '#00E5FF',
-    primaryForeground: '#070C14',
-    secondary: '#142942',
-    secondaryForeground: '#54D6FF',
-    muted: '#121E30',
-    mutedForeground: '#7E96B8',
-    accent: '#2B191B',
-    accentForeground: '#FF9E90',
-    destructive: '#FF4D4D',
+    text: '#0F172A',
+    tint: '#0284C7',
+    background: '#F8FAFC',
+    foreground: '#0F172A',
+    card: '#FFFFFF',
+    cardForeground: '#0F172A',
+    primary: '#0284C7',
+    primaryForeground: '#FFFFFF',
+    secondary: '#E0F2FE',
+    secondaryForeground: '#0369A1',
+    muted: '#F1F5F9',
+    mutedForeground: '#64748B',
+    accent: '#FEF2F2',
+    accentForeground: '#DC2626',
+    destructive: '#EF4444',
     destructiveForeground: '#FFFFFF',
-    border: '#1A2A44',
-    input: '#142942',
+    border: '#E2E8F0',
+    input: '#F1F5F9',
   },
   dark: {
     text: '#F0F6FF',
@@ -43,4 +43,5 @@ const colors = {
 };
 
 export default colors;
+
 

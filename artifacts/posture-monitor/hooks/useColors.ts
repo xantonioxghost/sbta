@@ -1,23 +1,26 @@
 import { useColorScheme } from 'react-native';
 import colors from '@/constants/colors';
+import { usePosture } from '@/context/PostureContext';
 
 /**
- * Returns the design tokens for the current color scheme.
- *
- * The returned object contains all color tokens for the active palette
- * plus scheme-independent values like `radius`.
- *
- * Falls back to the light palette when no dark key is defined in
- * constants/colors.ts (the scaffold ships light-only by default).
- * When a sibling web artifact's dark tokens are synced into a `dark`
- * key, this hook will automatically switch palettes based on the
- * device's appearance setting.
+ * Returns the design tokens for the active color scheme (Light or Dark).
+ * Reads user preference from PostureContext or falls back to system color scheme.
  */
 export function useColors() {
-  const scheme = useColorScheme();
-  const palette =
-    scheme === 'dark' && 'dark' in colors
-      ? colors.dark
-      : colors.light;
+  const systemScheme = useColorScheme();
+  let activeScheme: 'light' | 'dark' = systemScheme === 'dark' ? 'dark' : 'light';
+
+  try {
+    const posture = usePosture();
+    const prefTheme = posture?.preferences?.theme;
+    if (prefTheme === 'light' || prefTheme === 'dark') {
+      activeScheme = prefTheme;
+    }
+  } catch {
+    // Fallback if rendered outside PostureProvider context
+  }
+
+  const palette = activeScheme === 'dark' ? colors.dark : colors.light;
   return { ...palette, radius: colors.radius };
 }
+

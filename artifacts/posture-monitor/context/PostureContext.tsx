@@ -18,12 +18,15 @@ export type ConnectionStatus = 'disconnected' | 'searching' | 'connected';
 export type ConnectionMode = 'ble' | 'simulator';
 export type Reading = { angle: number; timestamp: number; good: boolean };
 
+export type ThemeMode = 'light' | 'dark' | 'system';
+
 export type Preferences = {
   threshold: number;
   delay: number;
   notifications: boolean;
   vibration: boolean;
   sound: boolean;
+  theme: ThemeMode;
 };
 
 export type HealthProfile = {
@@ -90,6 +93,7 @@ const defaultPreferences: Preferences = {
   notifications: true,
   vibration: true,
   sound: false,
+  theme: 'light',
 };
 
 const defaultProfile: HealthProfile = {
