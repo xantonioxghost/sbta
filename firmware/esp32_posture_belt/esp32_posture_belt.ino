@@ -223,25 +223,25 @@ void setup() {
   );
   pTxCharacteristic->addDescriptor(new BLE2902());
 
-  // Create RX Characteristic (Commands from App)
+  // Create RX Characteristic (Commands from App - support both Write & WriteWithoutResponse)
   BLECharacteristic *pRxCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID_RX,
-    BLECharacteristic::PROPERTY_WRITE
+    BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR
   );
   pRxCharacteristic->setCallbacks(new MyCallbacks());
 
   // Start the service
   pService->start();
 
-  // Start advertising
+  // Start advertising with Service UUID broadcast for Web Bluetooth compatibility
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMinPreferred(0x06); // Functions that help with iPhone & Android connections
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
 
-  Serial.println("[BLE] Advertising as 'PostureBelt'. Ready to pair.");
+  Serial.println("[BLE] Advertising as 'PostureBelt' (UUID: 6E400001). Ready to pair.");
 }
 
 // ------------------------------------------------------------------------------

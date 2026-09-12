@@ -134,25 +134,26 @@ export const devicesRelations = relations(devicesTable, ({ one }) => ({
 // Schemas & Types
 export const insertProfileSchema = createInsertSchema(profilesTable);
 export const selectProfileSchema = createSelectSchema(profilesTable);
-export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type InsertProfile = typeof profilesTable.$inferInsert;
 export type Profile = typeof profilesTable.$inferSelect;
 
 export const insertUserPreferencesSchema = createInsertSchema(userPreferencesTable);
 export const selectUserPreferencesSchema = createSelectSchema(userPreferencesTable);
-export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type InsertUserPreferences = typeof userPreferencesTable.$inferInsert;
 export type UserPreferences = typeof userPreferencesTable.$inferSelect;
 
 export const insertPostureSessionSchema = createInsertSchema(postureSessionsTable);
 export const selectPostureSessionSchema = createSelectSchema(postureSessionsTable);
-export type InsertPostureSession = z.infer<typeof insertPostureSessionSchema>;
+export type InsertPostureSession = typeof postureSessionsTable.$inferInsert;
 export type PostureSession = typeof postureSessionsTable.$inferSelect;
 
 export const insertPostureReadingSchema = createInsertSchema(postureReadingsTable);
 export const selectPostureReadingSchema = createSelectSchema(postureReadingsTable);
-export type InsertPostureReading = z.infer<typeof insertPostureReadingSchema>;
+export type InsertPostureReading = typeof postureReadingsTable.$inferInsert;
 export type PostureReading = typeof postureReadingsTable.$inferSelect;
 
 export const insertDeviceSchema = createInsertSchema(devicesTable);
 export const selectDeviceSchema = createSelectSchema(devicesTable);
-export type InsertDevice = z.infer<typeof insertDeviceSchema>;
+export type InsertDevice = typeof devicesTable.$inferInsert;
 export type Device = typeof devicesTable.$inferSelect;
+

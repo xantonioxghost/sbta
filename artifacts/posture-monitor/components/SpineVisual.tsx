@@ -9,9 +9,9 @@ type SpineVisualProps = {
   active?: boolean;
 };
 
-export function SpineVisual({ type, size = 44, color = '#00E5C3', active = false }: SpineVisualProps) {
-  const strokeColor = active ? color : '#82A69C';
-  const dotColor = active ? color : '#82A69C';
+export function SpineVisual({ type, size = 44, color = '#00E5FF', active = false }: SpineVisualProps) {
+  const strokeColor = active ? color : '#7E96B8';
+  const dotColor = active ? color : '#7E96B8';
 
   // SVG viewBox is 0 0 60 100
   const renderSpinePath = () => {

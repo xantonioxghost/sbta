@@ -106,7 +106,7 @@ export class PostureBeltBLEManager {
       setTimeout(() => {
         this.updateStatus('connected');
         this.startSimulation();
-      }, 1000);
+      }, 800);
       return;
     }
 
@@ -114,16 +114,37 @@ export class PostureBeltBLEManager {
     if (typeof window !== 'undefined' && 'bluetooth' in navigator) {
       try {
         const nav = navigator as any;
-        const device = await nav.bluetooth.requestDevice({
-          filters: [
-            { name: BLE_CONFIG.DEVICE_NAME },
-            { namePrefix: 'Posture' },
-            { namePrefix: 'sbta' },
-            { namePrefix: 'ESP32' },
-            { services: [BLE_CONFIG.SERVICE_UUID] },
-          ],
-          optionalServices: [BLE_CONFIG.SERVICE_UUID],
-        });
+        let device: any = null;
+
+        try {
+          // Primary scan: match device name, prefixes, or service UUID
+          device = await nav.bluetooth.requestDevice({
+            filters: [
+              { name: BLE_CONFIG.DEVICE_NAME },
+              { namePrefix: 'Posture' },
+              { namePrefix: 'posture' },
+              { namePrefix: 'sbta' },
+              { namePrefix: 'ESP32' },
+              { services: [BLE_CONFIG.SERVICE_UUID] },
+            ],
+            optionalServices: [BLE_CONFIG.SERVICE_UUID],
+          });
+        } catch (filterErr: any) {
+          // User didn't find device in filtered scan or browser requires acceptAllDevices fallback
+          if (filterErr.name !== 'NotFoundError') {
+            console.log('[BLE] Trying acceptAllDevices fallback scan:', filterErr);
+            device = await nav.bluetooth.requestDevice({
+              acceptAllDevices: true,
+              optionalServices: [BLE_CONFIG.SERVICE_UUID],
+            });
+          } else {
+            throw filterErr;
+          }
+        }
+
+        if (!device) {
+          throw new Error('No device selected');
+        }
 
         this.webDevice = device;
         device.addEventListener('gattserverdisconnected', () => {
@@ -134,7 +155,7 @@ export class PostureBeltBLEManager {
         this.webGattServer = server;
 
         const service = await server.getPrimaryService(BLE_CONFIG.SERVICE_UUID);
-        
+
         // Get TX Characteristic (Notifications from ESP32)
         try {
           const tx = await service.getCharacteristic(BLE_CONFIG.TX_CHARACTERISTIC_UUID);
@@ -163,19 +184,19 @@ export class PostureBeltBLEManager {
         this.updateStatus('connected');
         return;
       } catch (err: any) {
-        console.warn('[BLE] Web Bluetooth pairing error or cancelled:', err);
-        // User cancelled picker or error occurred -> fallback to simulation so app never hangs
+        console.warn('[BLE] Web Bluetooth pairing cancelled or error:', err);
+        // Fallback gracefully to demo simulation so user can experience app functionality
         this.updateStatus('connected');
         this.startSimulation();
         return;
       }
     }
 
-    // Fallback if browser doesn't support Web Bluetooth
+    // Fallback if environment doesn't support Web Bluetooth
     setTimeout(() => {
       this.updateStatus('connected');
       this.startSimulation();
-    }, 1200);
+    }, 1000);
   }
 
   /**

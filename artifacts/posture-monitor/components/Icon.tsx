@@ -41,7 +41,7 @@ type IconProps = {
   color?: any;
 };
 
-export function Icon({ name, size = 20, color = '#36C69D' }: IconProps) {
+export function Icon({ name, size = 20, color = '#00E5FF' }: IconProps) {
   const p = {
     width: size,
     height: size,
