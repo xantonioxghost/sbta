@@ -110,8 +110,8 @@ export function PostureProvider({ children }: PropsWithChildren) {
   const userId = user?.id || null;
 
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
-  const [connectionMode, setConnectionModeState] = useState<ConnectionMode>('simulator');
-  const [angle, setAngle] = useState(3);
+  const [connectionMode, setConnectionModeState] = useState<ConnectionMode>('ble');
+  const [angle, setAngle] = useState(0);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
   const [profile, setProfile] = useState<HealthProfile>(defaultProfile);
@@ -121,12 +121,42 @@ export function PostureProvider({ children }: PropsWithChildren) {
   const [alertActive, setAlertActive] = useState(false);
   const [calibrationStep, setCalibrationStep] = useState(0);
 
-  const angleRef = useRef(3);
   const statusRef = useRef(status);
 
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+
+  // Connect bleManager listeners for real BLE telemetry & status changes
+  useEffect(() => {
+    bleManager.onStatusChange((nextStatus) => {
+      setStatus(nextStatus);
+      if (nextStatus === 'connected') {
+        setSessionStartedAt(Date.now());
+        setReadings([]);
+        setBadStreak(0);
+        setAlertActive(false);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    });
+
+    bleManager.onTelemetry((telemetry) => {
+      const good = telemetry.angle <= preferences.threshold;
+      setAngle(telemetry.angle);
+      setReadings((existing) => [...existing, { angle: telemetry.angle, timestamp: Date.now(), good }].slice(-72));
+      setAlertActive(telemetry.alert);
+
+      if (telemetry.alert && preferences.vibration) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+    });
+
+    bleManager.onError((errMessage) => {
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert(`[Bluetooth Connection Error]\n\n${errMessage}`);
+      }
+    });
+  }, [preferences.threshold, preferences.vibration]);
 
   // Sync profile name from Auth if not set
   useEffect(() => {
@@ -178,6 +208,9 @@ export function PostureProvider({ children }: PropsWithChildren) {
       if (stored === 'ble' || stored === 'simulator') {
         setConnectionModeState(stored);
         bleManager.setMode(stored === 'simulator');
+      } else {
+        setConnectionModeState('ble');
+        bleManager.setMode(false);
       }
     });
   }, []);
@@ -241,30 +274,6 @@ export function PostureProvider({ children }: PropsWithChildren) {
     AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions)).catch(() => undefined);
   }, [sessions]);
 
-  // Telemetry stream processing
-  useEffect(() => {
-    if (status !== 'connected') return;
-
-    const interval = setInterval(() => {
-      const next = Math.max(0, Math.min(31, angleRef.current + (Math.random() - 0.52) * 2.8));
-      angleRef.current = next;
-      const good = next <= preferences.threshold;
-      setAngle(next);
-      setReadings((existing) => [...existing, { angle: next, timestamp: Date.now(), good }].slice(-72));
-      setBadStreak((current) => {
-        const nextStreak = good ? 0 : current + 0.2;
-        if (nextStreak >= preferences.delay && !alertActive) {
-          setAlertActive(true);
-          if (preferences.vibration) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        }
-        if (good) setAlertActive(false);
-        return nextStreak;
-      });
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [alertActive, preferences.delay, preferences.threshold, preferences.vibration, status]);
-
   const setConnectionMode = (mode: ConnectionMode) => {
     setConnectionModeState(mode);
     bleManager.setMode(mode === 'simulator');
@@ -273,20 +282,13 @@ export function PostureProvider({ children }: PropsWithChildren) {
 
   const connect = () => {
     if (statusRef.current === 'connected') return;
-    setStatus('searching');
-    setTimeout(() => {
-      setStatus('connected');
-      setSessionStartedAt(Date.now());
-      setReadings([]);
-      setBadStreak(0);
-      setAlertActive(false);
-      angleRef.current = 3;
-      setAngle(3);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, 1100);
+    bleManager.connect().catch((err) => {
+      console.warn('[PostureContext] BLE connect error:', err);
+    });
   };
 
   const disconnect = () => {
+    bleManager.disconnect();
     if (sessionStartedAt && readings.length > 0) {
       const endedAt = Date.now();
       const durationSeconds = Math.max(1, Math.round((endedAt - sessionStartedAt) / 1000));
@@ -335,8 +337,7 @@ export function PostureProvider({ children }: PropsWithChildren) {
       setCalibrationStep((current) => {
         if (current <= 1) {
           clearInterval(timer);
-          angleRef.current = 2;
-          setAngle(2);
+          setAngle(0);
           setBadStreak(0);
           setAlertActive(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

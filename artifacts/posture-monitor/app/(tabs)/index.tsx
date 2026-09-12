@@ -19,7 +19,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const router = useRouter();
-  const { angle, readings, status, preferences, sessionStartedAt, alertActive, calibrationStep, connect, disconnect, calibrate } = usePosture();
+  const { angle, readings, status, connectionMode, preferences, sessionStartedAt, alertActive, calibrationStep, connect, disconnect, calibrate } = usePosture();
   const [duration, setDuration] = React.useState('00:00');
 
   useEffect(() => {
@@ -46,8 +46,24 @@ export default function HomeScreen() {
       <Pressable testID="connection-card" onPress={isConnected ? disconnect : connect} style={({ pressed }) => [styles.connection, { backgroundColor: isConnected ? colors.secondary : colors.card, borderColor: isConnected ? colors.primary : colors.border, opacity: pressed ? 0.86 : 1 }]}>
         <View style={[styles.connectionDot, { backgroundColor: status === 'searching' ? colors.accentForeground : isConnected ? colors.primary : colors.mutedForeground }]} />
         <View style={styles.connectionCopy}>
-          <Text style={[styles.connectionTitle, { color: colors.foreground }]}>{status === 'searching' ? 'Searching for PostureBelt…' : isConnected ? 'PostureBelt connected' : 'PostureBelt not connected'}</Text>
-          <Text style={[styles.connectionSub, { color: colors.mutedForeground }]}>{isConnected ? `Tracking for ${duration}` : status === 'searching' ? 'Keep your wearable nearby' : 'Tap to scan for your wearable'}</Text>
+          <Text style={[styles.connectionTitle, { color: colors.foreground }]}>
+            {status === 'searching'
+              ? 'Searching for ESP32 Bluetooth…'
+              : isConnected
+                ? connectionMode === 'simulator'
+                  ? 'Demo Mode connected (Simulated)'
+                  : 'PostureBelt ESP32 connected'
+                : 'PostureBelt not connected'}
+          </Text>
+          <Text style={[styles.connectionSub, { color: colors.mutedForeground }]}>
+            {isConnected
+              ? `Tracking for ${duration}`
+              : status === 'searching'
+                ? 'Select your PostureBelt ESP32 in browser popup'
+                : connectionMode === 'simulator'
+                  ? 'Tap to start Demo Simulator'
+                  : 'Tap to pair with your ESP32 via Bluetooth'}
+          </Text>
         </View>
         <Icon name={isConnected ? 'x' : 'bluetooth'} size={19} color={isConnected ? colors.mutedForeground : colors.primary} />
       </Pressable>

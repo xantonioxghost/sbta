@@ -28,6 +28,7 @@ export class PostureBeltBLEManager {
   private status: BLEStatus = 'disconnected';
   private onTelemetryCallback?: (data: BLETelemetry) => void;
   private onStatusChangeCallback?: (status: BLEStatus) => void;
+  private onErrorCallback?: (errMessage: string) => void;
   private isSimulationMode = false;
   private simulationInterval?: ReturnType<typeof setInterval>;
   private simAngle = 3;
@@ -52,12 +53,20 @@ export class PostureBeltBLEManager {
     }
   }
 
+  public isSimulator(): boolean {
+    return this.isSimulationMode;
+  }
+
   public onTelemetry(callback: (data: BLETelemetry) => void) {
     this.onTelemetryCallback = callback;
   }
 
   public onStatusChange(callback: (status: BLEStatus) => void) {
     this.onStatusChangeCallback = callback;
+  }
+
+  public onError(callback: (errMessage: string) => void) {
+    this.onErrorCallback = callback;
   }
 
   public getStatus(): BLEStatus {
@@ -110,93 +119,92 @@ export class PostureBeltBLEManager {
       return;
     }
 
-    // Check if Web Bluetooth API is supported in browser (Chrome / Edge / Opera / Android Chrome)
-    if (typeof window !== 'undefined' && 'bluetooth' in navigator) {
-      try {
-        const nav = navigator as any;
-        let device: any = null;
-
-        try {
-          // Primary scan: match device name, prefixes, or service UUID
-          device = await nav.bluetooth.requestDevice({
-            filters: [
-              { name: BLE_CONFIG.DEVICE_NAME },
-              { namePrefix: 'Posture' },
-              { namePrefix: 'posture' },
-              { namePrefix: 'sbta' },
-              { namePrefix: 'ESP32' },
-              { services: [BLE_CONFIG.SERVICE_UUID] },
-            ],
-            optionalServices: [BLE_CONFIG.SERVICE_UUID],
-          });
-        } catch (filterErr: any) {
-          // User didn't find device in filtered scan or browser requires acceptAllDevices fallback
-          if (filterErr.name !== 'NotFoundError') {
-            console.log('[BLE] Trying acceptAllDevices fallback scan:', filterErr);
-            device = await nav.bluetooth.requestDevice({
-              acceptAllDevices: true,
-              optionalServices: [BLE_CONFIG.SERVICE_UUID],
-            });
-          } else {
-            throw filterErr;
-          }
-        }
-
-        if (!device) {
-          throw new Error('No device selected');
-        }
-
-        this.webDevice = device;
-        device.addEventListener('gattserverdisconnected', () => {
-          this.handleWebDisconnected();
-        });
-
-        const server = await device.gatt.connect();
-        this.webGattServer = server;
-
-        const service = await server.getPrimaryService(BLE_CONFIG.SERVICE_UUID);
-
-        // Get TX Characteristic (Notifications from ESP32)
-        try {
-          const tx = await service.getCharacteristic(BLE_CONFIG.TX_CHARACTERISTIC_UUID);
-          this.txCharacteristic = tx;
-          await tx.startNotifications();
-          tx.addEventListener('characteristicvaluechanged', (event: any) => {
-            const decoder = new TextDecoder('utf-8');
-            const raw = decoder.decode(event.target.value);
-            const telemetry = this.parsePayload(raw);
-            if (telemetry) {
-              this.onTelemetryCallback?.(telemetry);
-            }
-          });
-        } catch (e) {
-          console.warn('[BLE] Could not subscribe to TX characteristic:', e);
-        }
-
-        // Get RX Characteristic (Commands to ESP32)
-        try {
-          const rx = await service.getCharacteristic(BLE_CONFIG.RX_CHARACTERISTIC_UUID);
-          this.rxCharacteristic = rx;
-        } catch (e) {
-          console.warn('[BLE] Could not get RX characteristic:', e);
-        }
-
-        this.updateStatus('connected');
-        return;
-      } catch (err: any) {
-        console.warn('[BLE] Web Bluetooth pairing cancelled or error:', err);
-        // Fallback gracefully to demo simulation so user can experience app functionality
-        this.updateStatus('connected');
-        this.startSimulation();
-        return;
-      }
+    // Check Web Bluetooth API support
+    if (typeof window === 'undefined' || !('bluetooth' in navigator)) {
+      this.updateStatus('disconnected');
+      this.onErrorCallback?.('Web Bluetooth is not supported in this browser. Please use Chrome or Edge.');
+      return;
     }
 
-    // Fallback if environment doesn't support Web Bluetooth
-    setTimeout(() => {
+    try {
+      const nav = navigator as any;
+      let device: any = null;
+
+      try {
+        device = await nav.bluetooth.requestDevice({
+          filters: [
+            { name: BLE_CONFIG.DEVICE_NAME },
+            { namePrefix: 'Posture' },
+            { namePrefix: 'posture' },
+            { namePrefix: 'sbta' },
+            { namePrefix: 'ESP32' },
+            { services: [BLE_CONFIG.SERVICE_UUID] },
+          ],
+          optionalServices: [BLE_CONFIG.SERVICE_UUID],
+        });
+      } catch (filterErr: any) {
+        if (filterErr.name === 'NotFoundError' || filterErr.message?.includes('cancelled')) {
+          throw new Error('Bluetooth scan cancelled. Please select your PostureBelt ESP32 device.');
+        }
+        // Try acceptAllDevices fallback scan
+        console.log('[BLE] Trying acceptAllDevices scan fallback:', filterErr);
+        device = await nav.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [BLE_CONFIG.SERVICE_UUID],
+        });
+      }
+
+      if (!device) {
+        throw new Error('No device selected');
+      }
+
+      this.webDevice = device;
+      device.addEventListener('gattserverdisconnected', () => {
+        this.handleWebDisconnected();
+      });
+
+      console.log('[BLE] Connecting to GATT server...');
+      const server = await device.gatt.connect();
+      this.webGattServer = server;
+
+      console.log('[BLE] Getting primary service:', BLE_CONFIG.SERVICE_UUID);
+      const service = await server.getPrimaryService(BLE_CONFIG.SERVICE_UUID);
+
+      // Subscribe to TX Characteristic (Notifications from ESP32)
+      try {
+        const tx = await service.getCharacteristic(BLE_CONFIG.TX_CHARACTERISTIC_UUID);
+        this.txCharacteristic = tx;
+        await tx.startNotifications();
+        tx.addEventListener('characteristicvaluechanged', (event: any) => {
+          const decoder = new TextDecoder('utf-8');
+          const raw = decoder.decode(event.target.value);
+          const telemetry = this.parsePayload(raw);
+          if (telemetry) {
+            this.onTelemetryCallback?.(telemetry);
+          }
+        });
+        console.log('[BLE] Subscribed to TX notifications successfully.');
+      } catch (e: any) {
+        console.warn('[BLE] Could not subscribe to TX characteristic:', e);
+      }
+
+      // Get RX Characteristic (Commands to ESP32)
+      try {
+        const rx = await service.getCharacteristic(BLE_CONFIG.RX_CHARACTERISTIC_UUID);
+        this.rxCharacteristic = rx;
+        console.log('[BLE] RX characteristic acquired.');
+      } catch (e: any) {
+        console.warn('[BLE] Could not get RX characteristic:', e);
+      }
+
       this.updateStatus('connected');
-      this.startSimulation();
-    }, 1000);
+      return;
+    } catch (err: any) {
+      console.warn('[BLE] Web Bluetooth pairing error:', err);
+      this.updateStatus('disconnected');
+      this.onErrorCallback?.(err.message || 'Failed to connect to ESP32 Bluetooth device.');
+      return;
+    }
   }
 
   /**
@@ -246,10 +254,13 @@ export class PostureBeltBLEManager {
       }
     }
 
-    // Fallback simulation reset
-    this.simAngle = 2;
-    this.onTelemetryCallback?.({ angle: 2, alert: false });
-    return true;
+    if (this.isSimulationMode) {
+      this.simAngle = 2;
+      this.onTelemetryCallback?.({ angle: 2, alert: false });
+      return true;
+    }
+
+    return false;
   }
 
   private startSimulation() {
@@ -268,3 +279,4 @@ export class PostureBeltBLEManager {
 }
 
 export const bleManager = new PostureBeltBLEManager(false);
+
